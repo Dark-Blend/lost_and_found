@@ -1,0 +1,60 @@
+import React from "react";
+import { Tabs, Redirect } from "expo-router";
+import { icons } from "../../constants/icons";
+import { View, Image } from "react-native";
+
+const TabIcon = ({ icon, focused }) => {
+  return (
+    <View
+      className={`flex rounded-full h-16 w-32 items-center justify-center ${
+        focused ? "bg-black " : ""
+      }`}
+    >
+      <Image
+        source={icon}
+        className="w-12 h-12"
+        resizeMode="contain"
+        tintColor={focused ? "#ffffff" : "#000000"}
+      />
+    </View>
+  );
+};
+
+const TabsLayout = () => {
+  return (
+    <Tabs
+      screenOptions={{
+        tabBarShowLabel: false,
+        tabBarStyle: { height: 84 },
+        tabBarIconStyle: { marginTop: 20 },
+      }}
+    >
+      <Tabs.Screen
+        name="home"
+        options={{
+          title: "Home",
+          headerShown: false,
+          tabBarIcon: ({ focused }) => TabIcon({ icon: icons.home, focused }),
+        }}
+      />
+      <Tabs.Screen
+        name="karma"
+        options={{
+          title: "Karma",
+          headerShown: false,
+          tabBarIcon: ({ focused }) => TabIcon({ icon: icons.karma, focused }),
+        }}
+      />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: "Chat",
+          headerShown: false,
+          tabBarIcon: ({ focused }) => TabIcon({ icon: icons.chat, focused }),
+        }}
+      />
+    </Tabs>
+  );
+};
+
+export default TabsLayout;
