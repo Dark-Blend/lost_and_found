@@ -6,6 +6,8 @@ import chat from '../assets/icons/chat.png'
 import karma from '../assets/icons/karma.png'
 import search from '../assets/icons/search.png'
 import filter from '../assets/icons/filter.png'
+import plus from '../assets/icons/plus.png'
+import close from '../assets/icons/close.png'
 
 export const icons = {
     rightarrow,
@@ -15,5 +17,7 @@ export const icons = {
     chat,
     karma,
     search,
-    filter
+    filter,
+    plus,
+    close
 }

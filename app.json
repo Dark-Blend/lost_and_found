@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "lost_and_found",
+    "name": "Lost and Found",
     "slug": "lost_and_found",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -12,10 +12,12 @@
       "supportsTablet": true
     },
     "android": {
+      "permissions": ["ACCESS_FINE_LOCATION"],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.afsal.lost_and_found"
     },
     "web": {
       "bundler": "metro",
@@ -36,6 +38,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "8e2f8e7e-c1a4-4a46-b9c7-e6135b65fbb2"
+      }
     }
   }
 }

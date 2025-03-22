@@ -3,8 +3,8 @@ import { FIREBASE_AUTH } from "../firebaseConfig";
 
 export const SignUp = async (email, password) => {
   try {
-    const user = await createUserWithEmailAndPassword(FIREBASE_AUTH, email, password);
-    return user;
+    const userCredentials = await createUserWithEmailAndPassword(FIREBASE_AUTH, email, password);
+    return userCredentials.user;
   } catch (error) {
     let errorMessage = "Sign up failed";
     switch (error.code) {

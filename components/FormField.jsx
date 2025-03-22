@@ -2,12 +2,12 @@ import { View, Text, TextInput, TouchableOpacity, Image } from 'react-native'
 import React, { useState } from 'react'
 import { icons } from '../constants/icons'
 
-const FormField = ({title, placeholder, value, setValue, secureTextEntry}) => {
+const FormField = ({title, placeholder, value, setValue, secureTextEntry , multiline, otherStyles}) => {
   const [isFocused, setIsFocused] = useState(false)
   const [isSecureTextEntry, setIsSecureTextEntry] = useState(secureTextEntry)
   
   return (  
-    <View className='w-full'>
+    <View className={`w-full ${otherStyles}`}>
       <Text className='font-poppins text-lg text-black/50'>{title}</Text>
       <View className={`border flex flex-row items-center justify-between rounded-xl p-1 ${isFocused ? 'border-black' : 'border-black/20'}`}>
         <TextInput
@@ -15,6 +15,7 @@ const FormField = ({title, placeholder, value, setValue, secureTextEntry}) => {
           value={value}
           onChangeText={setValue}
           secureTextEntry={isSecureTextEntry}
+          multiline={multiline}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           className="flex-1 text-base font-poppins"

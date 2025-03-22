@@ -34,11 +34,12 @@ const Signup = () => {
       }
       setLoading(true);
       try {
-        const user = await SignUp(form.email, form.password);
+        const authUser = await SignUp(form.email, form.password);
 
         // Auth success
-        if (user) {
+        if (authUser) {
           Alert.alert("Success", "Sign up successful");
+          console.log("auth user : " , authUser)
           
           // adding user to database
           try{
@@ -50,10 +51,11 @@ const Signup = () => {
               createdAt : new Date(),
               karma : 0,
             };
-            const user = await createUser(userData);
-            if(user){
-              console.log("User created with ID: ", user);
+            const userId = await createUser(userData , authUser.uid);
+            if(userId){
+              console.log("User created with ID: ", userId);
               setLoading(false);
+              router.push('/home');
             }
           }catch(error){
             console.error("Error creating user: ", error);
