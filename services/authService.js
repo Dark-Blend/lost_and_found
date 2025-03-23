@@ -70,6 +70,6 @@ export const SignOut = async () => {
     return true;
   } catch (error) {
     console.error("Error signing out:", error);
-    throw error;
+    throw new Error("Failed to sign out. Please try again.");
   }
 };

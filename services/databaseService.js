@@ -253,3 +253,28 @@ export const deleteFoundItem = async (itemId) => {
     throw error;
   }
 };
+
+export const getAllFoundItems = async () => {
+  try {
+    const foundItemsRef = collection(FIREBASE_DB, "foundItems");
+    const q = query(
+      foundItemsRef, 
+      where("isClaimed", "==", false),
+      orderBy("createdAt", "desc")
+    );
+    const querySnapshot = await getDocs(q);
+    
+    const items = [];
+    querySnapshot.forEach((doc) => {
+      items.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    return items;
+  } catch (error) {
+    console.error("Error getting all found items:", error);
+    throw error;
+  }
+};
