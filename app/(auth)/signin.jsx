@@ -7,8 +7,10 @@ import Button from "../../components/Button";
 import { router, Link } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { SignIn } from "../../services/authService";
+import { useGlobalContext } from "../../context/GlobalProvider";
 
 const signin = () => {
+  const { setCurrentUser } = useGlobalContext();
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -29,6 +31,7 @@ const signin = () => {
     try {
       const user = await SignIn(form.email, form.password);
       if (user) {
+        setCurrentUser(user.user);
         Alert.alert("Success", "Sign in successful");
         router.replace("/home");
       }
@@ -37,7 +40,6 @@ const signin = () => {
     } finally {
       setLoading(false);
     }
-      
   };
 
   return (

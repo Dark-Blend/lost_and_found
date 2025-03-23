@@ -1,4 +1,4 @@
-import { createUserWithEmailAndPassword , signInWithEmailAndPassword , onAuthStateChanged } from "firebase/auth";
+import { createUserWithEmailAndPassword , signInWithEmailAndPassword , onAuthStateChanged, signOut as firebaseSignOut } from "firebase/auth";
 import { FIREBASE_AUTH } from "../firebaseConfig";
 
 export const SignUp = async (email, password) => {
@@ -63,3 +63,13 @@ export const SignIn = async (email, password) => {
       });
     });
   };
+
+export const SignOut = async () => {
+  try {
+    await firebaseSignOut(FIREBASE_AUTH);
+    return true;
+  } catch (error) {
+    console.error("Error signing out:", error);
+    throw new Error("Failed to sign out. Please try again.");
+  }
+};

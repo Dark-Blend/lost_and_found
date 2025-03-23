@@ -1,10 +1,12 @@
-import { View, Text, Image, ActivityIndicator } from "react-native";
+import { View, Text, Image, ActivityIndicator, TouchableOpacity } from "react-native";
 import React, { useEffect, useState } from "react";
 import images from "../constants/images";
 import { getUser } from "../services/databaseService";
 import { useGlobalContext } from "../context/GlobalProvider";
+import { useRouter } from "expo-router";
 
 const Header = () => {
+  const router = useRouter();
   const { currentUser } = useGlobalContext();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -44,11 +46,13 @@ const Header = () => {
   return (
     <View className="py-3 px-4 flex-row justify-between items-center">
       <Image source={images.logo} className="w-16 h-16" resizeMode="contain" />
-      <Image
-        source={{ uri: imageUrl }}
-        className="w-12 h-12 rounded-full border"
-        resizeMode="cover"
-      />
+      <TouchableOpacity onPress={() => router.push('/profile')}>
+        <Image
+          source={{ uri: imageUrl }}
+          className="w-12 h-12 rounded-full border"
+          resizeMode="cover"
+        />
+      </TouchableOpacity>
     </View>
   );
 };

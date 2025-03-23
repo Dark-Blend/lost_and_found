@@ -8,8 +8,8 @@ import Header from '../../components/Header';
 const TabIcon = ({ icon, focused }) => {
   return (
     <View
-      className={`flex rounded-full h-16 w-32 items-center justify-center ${
-        focused ? 'bg-black' : ''
+      className={`flex rounded-full h-16  items-center justify-center ${
+        focused ? 'bg-black w-32 flex-2' : 'bg-[##0000001a] w-20'
       }`}
     >
       <Image

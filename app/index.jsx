@@ -7,6 +7,7 @@ import { useGlobalContext } from "../context/GlobalProvider";
 import { ActivityIndicator } from "react-native";
 import { useEffect } from "react";
 
+
 export default function App() {
   const { currentUser, isLoading } = useGlobalContext();
 

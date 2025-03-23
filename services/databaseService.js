@@ -1,5 +1,5 @@
 import { FIREBASE_DB } from "../firebaseConfig";
-import { collection, setDoc, doc, getDoc } from "firebase/firestore";
+import { collection, setDoc, doc, getDoc, updateDoc, getDocs, query, orderBy, limit, where, deleteDoc } from "firebase/firestore";
 
 export const createUser = async (userData , userId) => {
     try {
@@ -77,6 +77,179 @@ export const addFoundItem = async (itemData) => {
     return itemId;
   } catch (error) {
     console.error("Error adding found item:", error);
+    throw error;
+  }
+};
+
+export const updateUser = async (userId, userData) => {
+  try {
+    const userRef = doc(FIREBASE_DB, "users", userId);
+    await updateDoc(userRef, userData);
+    return true;
+  } catch (error) {
+    console.error("Error updating user:", error);
+    throw error;
+  }
+};
+
+export const addKarma = async (userId, amount, reason) => {
+  try {
+    const karmaRef = doc(collection(FIREBASE_DB, "karma"), userId);
+    const userRef = doc(FIREBASE_DB, "users", userId);
+    
+    // Get user data
+    const userDoc = await getDoc(userRef);
+    if (!userDoc.exists()) {
+      throw new Error("User not found");
+    }
+    const userData = userDoc.data();
+
+    // Create karma entry
+    const karmaData = {
+      userId,
+      username: userData.username,
+      amount,
+      reason,
+      timestamp: new Date(),
+      userAvatar: userData.avatar
+    };
+
+    await setDoc(karmaRef, karmaData);
+    return true;
+  } catch (error) {
+    console.error("Error adding karma:", error);
+    throw error;
+  }
+};
+
+export const getKarmaLeaderboard = async () => {
+  try {
+    const karmaRef = collection(FIREBASE_DB, "karma");
+    const q = query(karmaRef, orderBy("timestamp", "desc"), limit(100));
+    const querySnapshot = await getDocs(q);
+    
+    const karmaList = [];
+    querySnapshot.forEach((doc) => {
+      karmaList.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    return karmaList;
+  } catch (error) {
+    console.error("Error getting karma leaderboard:", error);
+    throw error;
+  }
+};
+
+export const getUserKarma = async (userId) => {
+  try {
+    const karmaRef = collection(FIREBASE_DB, "karma");
+    const q = query(karmaRef, where("userId", "==", userId));
+    const querySnapshot = await getDocs(q);
+    
+    let totalKarma = 0;
+    const karmaHistory = [];
+    
+    querySnapshot.forEach((doc) => {
+      const karmaData = doc.data();
+      totalKarma += karmaData.amount;
+      karmaHistory.push({
+        id: doc.id,
+        ...karmaData
+      });
+    });
+    
+    return {
+      totalKarma,
+      karmaHistory
+    };
+  } catch (error) {
+    console.error("Error getting user karma:", error);
+    throw error;
+  }
+};
+
+export const getUserFoundItems = async (userId) => {
+  try {
+    const foundItemsRef = collection(FIREBASE_DB, "foundItems");
+    const q = query(foundItemsRef, where("foundBy", "==", userId), orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(q);
+    
+    const items = [];
+    querySnapshot.forEach((doc) => {
+      items.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    return items;
+  } catch (error) {
+    console.error("Error getting user found items:", error);
+    throw error;
+  }
+};
+
+export const updateFoundItem = async (itemId, itemData) => {
+  try {
+    const itemRef = doc(FIREBASE_DB, "foundItems", itemId);
+    await updateDoc(itemRef, {
+      ...itemData,
+      updatedAt: new Date(),
+      isClaimed: !!itemData.claimedBy // Ensure isClaimed is updated based on claimedBy
+    });
+    return true;
+  } catch (error) {
+    console.error("Error updating found item:", error);
+    throw error;
+  }
+};
+
+export const getAllUsers = async () => {
+  try {
+    const usersRef = collection(FIREBASE_DB, "users");
+    const querySnapshot = await getDocs(usersRef);
+    const users = [];
+    querySnapshot.forEach((doc) => {
+      users.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    return users;
+  } catch (error) {
+    console.error("Error loading users:", error);
+    throw error;
+  }
+};
+
+export const getFoundItemById = async (itemId) => {
+  try {
+    const itemRef = doc(FIREBASE_DB, "foundItems", itemId);
+    const itemDoc = await getDoc(itemRef);
+    
+    if (itemDoc.exists()) {
+      return {
+        id: itemDoc.id,
+        ...itemDoc.data()
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error("Error getting found item:", error);
+    throw error;
+  }
+};
+
+export const deleteFoundItem = async (itemId) => {
+  try {
+    const itemRef = doc(FIREBASE_DB, "foundItems", itemId);
+    await deleteDoc(itemRef);
+    return true;
+  } catch (error) {
+    console.error("Error deleting found item:", error);
     throw error;
   }
 };

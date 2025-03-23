@@ -32,6 +32,7 @@ const AddFoundItem = () => {
     images: [],
     categories: [],
     timestamp: new Date(),
+    isClaimed: false,
   });
 
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -93,6 +94,7 @@ const AddFoundItem = () => {
         images: [],
         categories: [],
         timestamp: new Date(),
+        isClaimed: false,
       });
     } catch (error) {
       Alert.alert("Error", "Failed to add item");

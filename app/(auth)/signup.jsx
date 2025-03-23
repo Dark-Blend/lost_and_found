@@ -49,7 +49,7 @@ const Signup = () => {
               avatar: createAvatar(form.username),
               bio : '',
               createdAt : new Date(),
-              karma : 0,
+              role : 'user',
             };
             const userId = await createUser(userData , authUser.uid);
             if(userId){
