@@ -104,7 +104,7 @@ const AddFoundItem = () => {
   };
 
   return (
-    <View className="flex-1">
+    <View className="flex-1 z-10">
       <TouchableOpacity
         className="rounded-full absolute bottom-4 right-2 bg-primary"
         style={styles.shadowedView}
