@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 
-const LocationPicker = ({ onLocationSelect }) => {
+const LocationPicker = forwardRef(({ onLocationSelect }, ref) => {
   const [location, setLocation] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
 
@@ -19,6 +19,12 @@ const LocationPicker = ({ onLocationSelect }) => {
       setLocation(currentLocation);
     })();
   }, []);
+
+  useImperativeHandle(ref, () => ({
+    reset: () => {
+      setLocation(null);
+    }
+  }));
 
   const handleMapPress = (event) => {
     const { coordinate } = event.nativeEvent;
@@ -59,18 +65,16 @@ const LocationPicker = ({ onLocationSelect }) => {
       </MapView>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
-    width: '90%',
-    height: 200,
-    
+    width: '100%',
+    height: 250,
   },
   map: {
-    width: 315,
+    width: '100%',
     height: '100%',
-
   },
 });
 

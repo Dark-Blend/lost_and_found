@@ -1,10 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import { View, Image, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import * as ExpoImagePicker from 'expo-image-picker';
 import { icons } from '../constants/icons';
 
-const ImagePickerComponent = ({ onImagesSelected }) => {
+const ImagePickerComponent = forwardRef(({ onImagesSelected }, ref) => {
   const [images, setImages] = useState([]);
+
+  useImperativeHandle(ref, () => ({
+    reset: () => {
+      setImages([]);
+      onImagesSelected([]);
+    }
+  }));
 
   const pickImage = async () => {
     try {
@@ -61,7 +68,7 @@ const ImagePickerComponent = ({ onImagesSelected }) => {
       </ScrollView>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

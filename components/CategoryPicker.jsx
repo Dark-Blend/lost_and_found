@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef, useImperativeHandle } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 
 const categories = [
@@ -13,7 +13,13 @@ const categories = [
   'Others'
 ];
 
-const CategoryPicker = ({ selectedCategories, onCategorySelect }) => {
+const CategoryPicker = forwardRef(({ selectedCategories, onCategorySelect }, ref) => {
+  useImperativeHandle(ref, () => ({
+    reset: () => {
+      onCategorySelect([]);
+    }
+  }));
+
   const toggleCategory = (category) => {
     if (selectedCategories.includes(category)) {
       onCategorySelect(selectedCategories.filter(c => c !== category));
@@ -47,7 +53,7 @@ const CategoryPicker = ({ selectedCategories, onCategorySelect }) => {
       </ScrollView>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

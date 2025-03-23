@@ -42,6 +42,14 @@ const TabsLayout = () => {
           }}
         />
         <Tabs.Screen
+          name="add"
+          options={{
+            title: 'Add',
+            headerShown: false,
+            tabBarIcon: ({ focused }) => TabIcon({ icon: icons.plus, focused }),
+          }}
+        />
+        <Tabs.Screen
           name="karma"
           options={{
             title: 'Karma',
