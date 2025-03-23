@@ -3,7 +3,7 @@ import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Dimensions
 import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = width * 0.9;
+const CARD_WIDTH = width * 0.915;
 
 const ItemDetailsBox = ({ items, selectedItemId }) => {
   const router = useRouter();
