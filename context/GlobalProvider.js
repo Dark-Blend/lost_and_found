@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { getCurrentUser } from "../services/authService";
+import { onAuthStateChanged } from "firebase/auth";
+import { FIREBASE_AUTH } from "../firebaseConfig";
 
 const GlobalContext = createContext();
 
@@ -10,10 +12,13 @@ export const GlobalProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    getCurrentUser().then((user) => {
+    const unsubscribe = onAuthStateChanged(FIREBASE_AUTH, (user) => {
       setCurrentUser(user);
       setIsLoading(false);
     });
+
+    // Cleanup subscription
+    return () => unsubscribe();
   }, []);
 
   return (

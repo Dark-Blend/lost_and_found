@@ -7,6 +7,7 @@ import {
   TextInput,
   Alert,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useGlobalContext } from "../context/GlobalProvider";
@@ -96,7 +97,7 @@ const ProfileHeader = ({
 
 const Profile = () => {
   const router = useRouter();
-  const { currentUser } = useGlobalContext();
+  const { currentUser, setCurrentUser } = useGlobalContext();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [bio, setBio] = useState("");
@@ -107,6 +108,9 @@ const Profile = () => {
   useEffect(() => {
     if (currentUser) {
       loadUserData();
+    } else {
+      // If no current user, redirect to signin
+      router.replace("/signin");
     }
   }, [currentUser]);
 
@@ -118,11 +122,11 @@ const Profile = () => {
         setBio(userData.bio || "");
         setAvatar(userData.avatar);
         setUsername(userData.username || "");
-        setLoading(false);
       }
     } catch (error) {
       console.error("Error loading user data:", error);
       Alert.alert("Error", "Failed to load user data");
+    } finally {
       setLoading(false);
     }
   };
@@ -210,11 +214,20 @@ const Profile = () => {
         text: "Logout",
         onPress: async () => {
           try {
+            setLoading(true); // Show loading state while logging out
             await SignOut();
+            // Only clear states and redirect after successful logout
+            setUser(null);
+            setCurrentUser(null);
             router.replace("/signin");
           } catch (error) {
             console.error("Error logging out:", error);
-            Alert.alert("Error", error.message);
+            Alert.alert(
+              "Error",
+              "Failed to sign out. Please try again."
+            );
+          } finally {
+            setLoading(false);
           }
         },
         style: "destructive",
@@ -225,9 +238,13 @@ const Profile = () => {
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center">
-        <Text>Loading...</Text>
+        <ActivityIndicator size="large" color="#0000ff" />
       </View>
     );
+  }
+
+  if (!currentUser || !user) {
+    return null; // Will redirect due to useEffect
   }
 
   const lastEdited = user?.editedAt
@@ -235,7 +252,7 @@ const Profile = () => {
     : "Not edited yet";
 
   return (
-    <View className="flex-1 flex  justify-between">
+    <View className="flex-1 flex justify-between">
       <StatusBar hidden />
       {/* Profile Header Section */}
       <View className="bg-white px-5 pt-10">
@@ -301,7 +318,7 @@ const Profile = () => {
       </View>
 
       {/* Posts Section */}
-      <UserPosts userId={currentUser.uid} />
+      {currentUser && <UserPosts userId={currentUser.uid} />}
 
       {/* Footer Section */}
       <View className="px-5 py-4">

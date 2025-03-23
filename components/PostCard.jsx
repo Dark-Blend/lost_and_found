@@ -2,25 +2,51 @@ import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import ClaimPicker from './ClaimPicker';
+import { addKarma } from '../services/databaseService';
 
 const PostCard = ({ item, onUpdateStatus }) => {
   const router = useRouter();
   const [showClaimPicker, setShowClaimPicker] = useState(false);
 
-  const handleStatusUpdate = (userId = null) => {
+  const handleStatusUpdate = async (userId = null) => {
     const updatedStatus = userId ? 'claimed' : 'available';
-    onUpdateStatus(item.id, {
-      ...item,
-      claimedBy: userId,
-      isClaimed: !!userId,
-      status: updatedStatus
-    });
-    setShowClaimPicker(false);
+    
+    try {
+      // Update the item status first
+      await onUpdateStatus(item.id, {
+        ...item,
+        claimedBy: userId,
+        isClaimed: !!userId,
+        status: updatedStatus
+      });
+
+      // Handle karma updates
+      if (userId) {
+        // Item is being claimed, add karma to the finder
+        await addKarma(
+          item.foundBy,
+          50,
+          `Item "${item.itemName}" was claimed`
+        );
+      } else if (item.claimedBy) {
+        // Item is being unclaimed, remove karma from the finder
+        await addKarma(
+          item.foundBy,
+          -50,
+          `Claim removed for item "${item.itemName}"`
+        );
+      }
+
+      setShowClaimPicker(false);
+    } catch (error) {
+      console.error('Error updating status and karma:', error);
+      // You might want to show an alert here
+    }
   };
 
   return (
     <TouchableOpacity 
-      className="w-[350px] h-[300px] bg-white rounded-lg shadow-md m-2 overflow-hidden"
+      className="w-[350px] max-h-[350px]  bg-white rounded-lg shadow-md m-2 overflow-hidden"
       onPress={() => router.push(`/post/${item.id}`)}
     >
       <Image 
