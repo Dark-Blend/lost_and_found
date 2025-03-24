@@ -7,6 +7,7 @@ import {
   TextInput,
   Alert,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useGlobalContext } from "../context/GlobalProvider";
@@ -225,7 +226,7 @@ const Profile = () => {
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center">
-        <Text>Loading...</Text>
+        <ActivityIndicator size="large" color="#0000ff" />
       </View>
     );
   }
@@ -301,7 +302,11 @@ const Profile = () => {
       </View>
 
       {/* Posts Section */}
-      <UserPosts userId={currentUser.uid} />
+      {
+        user?.role === "user" && (
+          <UserPosts userId={currentUser.uid} />
+        )
+      }
 
       {/* Footer Section */}
       <View className="px-5 py-4">

@@ -7,14 +7,25 @@ import { useGlobalContext } from "../context/GlobalProvider";
 import { ActivityIndicator } from "react-native";
 import { useEffect } from "react";
 
-
 export default function App() {
   const { currentUser, isLoading } = useGlobalContext();
 
   useEffect(() => {
     if (!isLoading && currentUser) {
-      console.log("currentUser", currentUser);
-      router.push("/home");
+      console.log("User authenticated:", currentUser.uid);
+      console.log("User role:", currentUser.role);
+      console.log("User data:", JSON.stringify(currentUser, null, 2));
+      
+      // Check if user has admin role
+      if (currentUser.role === "admin") {
+        console.log("Routing to admin dashboard");
+        router.replace("/admin/users");
+      } else {
+        console.log("Routing to home page");
+        router.replace("/home");
+      }
+    } else {
+      console.log("Loading:", isLoading, "CurrentUser:", currentUser);
     }
   }, [currentUser, isLoading]);
 

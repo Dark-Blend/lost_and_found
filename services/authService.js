@@ -1,5 +1,7 @@
-import { createUserWithEmailAndPassword , signInWithEmailAndPassword , onAuthStateChanged, signOut as firebaseSignOut } from "firebase/auth";
+import { createUserWithEmailAndPassword , signInWithEmailAndPassword , onAuthStateChanged, signOut as firebaseSignOut, clearPersistence } from "firebase/auth";
 import { FIREBASE_AUTH } from "../firebaseConfig";
+import { doc, getDoc } from "firebase/firestore";
+import { FIREBASE_DB } from "../firebaseConfig";
 
 export const SignUp = async (email, password) => {
   try {
@@ -56,13 +58,22 @@ export const SignIn = async (email, password) => {
     }
   };
 
-  export const getCurrentUser = () => {
-    return new Promise((resolve) => {
-      onAuthStateChanged(FIREBASE_AUTH, (user) => {
-        resolve(user);
-      });
+export const getCurrentUser = () => {
+  return new Promise((resolve) => {
+    onAuthStateChanged(FIREBASE_AUTH, async (user) => {
+      if (user) {
+        // Get user role from Firestore
+        const userDoc = await getDoc(doc(FIREBASE_DB, "users", user.uid));
+        if (userDoc.exists()) {
+          user.role = userDoc.data().role || "user";
+        } else {
+          user.role = "user";
+        }
+      }
+      resolve(user);
     });
-  };
+  });
+};
 
 export const SignOut = async () => {
   try {

@@ -10,6 +10,8 @@ import plus from '../assets/icons/plus.png'
 import close from '../assets/icons/close.png'
 import edit from '../assets/icons/edit.png'
 import paperplane from '../assets/icons/paperplane.png'
+import users from '../assets/icons/users.png'
+import posts from '../assets/icons/posts.png'
 
 export const icons = {
     rightarrow,
@@ -23,5 +25,7 @@ export const icons = {
     plus,
     close,
     edit,
-    paperplane
+    paperplane,
+    users,
+    posts
 }

@@ -4,7 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import AccessLocation from "../../components/AccessLocation";
 
 const Home = () => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategories, setSelectedCategories] = useState([]);
 
   const handleSearch = (query) => {
@@ -18,7 +18,7 @@ const Home = () => {
   return (
     <View className="flex-1">
       <StatusBar hidden />
-      <AccessLocation 
+      <AccessLocation
         searchQuery={searchQuery}
         selectedCategories={selectedCategories}
       />

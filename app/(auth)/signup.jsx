@@ -9,8 +9,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { SignUp } from "../../services/authService";
 import { createUser } from "../../services/databaseService";
 import { createAvatar } from "../../services/utilServices";
+import { useGlobalContext } from "../../context/GlobalProvider";
 
 const Signup = () => {
+  const { setCurrentUser } = useGlobalContext();
   const [form, setForm] = useState({
     username: "",
     email: "",
@@ -54,6 +56,7 @@ const Signup = () => {
             const userId = await createUser(userData , authUser.uid);
             if(userId){
               console.log("User created with ID: ", userId);
+              setCurrentUser(authUser);
               setLoading(false);
               router.push('/home');
             }
@@ -61,8 +64,6 @@ const Signup = () => {
             console.error("Error creating user: ", error);
             setLoading(false);
           }
-
-          
         } else {
           throw new Error("Sign up failed");
         }
