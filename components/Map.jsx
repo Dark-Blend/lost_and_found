@@ -4,18 +4,26 @@ import { StyleSheet, View, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { getAllFoundItems } from '../services/databaseService';
 import ItemDetailsBox from './ItemDetailsBox';
+import SearchBar from './SearchBar';
 
 const { width, height } = Dimensions.get('window');
 
-const Map = ({ latitude, longitude }) => {
+const Map = ({ latitude, longitude, searchQuery: initialSearchQuery, selectedCategories: initialSelectedCategories }) => {
   const router = useRouter();
   const [foundItems, setFoundItems] = useState([]);
+  const [filteredItems, setFilteredItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedItemId, setSelectedItemId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery || '');
+  const [selectedCategories, setSelectedCategories] = useState(initialSelectedCategories || []);
 
   useEffect(() => {
     loadFoundItems();
   }, []);
+
+  useEffect(() => {
+    filterItems();
+  }, [searchQuery, selectedCategories, foundItems]);
 
   const loadFoundItems = async () => {
     try {
@@ -28,6 +36,36 @@ const Map = ({ latitude, longitude }) => {
     }
   };
 
+  const filterItems = () => {
+    let filtered = [...foundItems];
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(item => 
+        item.itemName.toLowerCase().includes(query) ||
+        item.description.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply category filter
+    if (selectedCategories.length > 0) {
+      filtered = filtered.filter(item =>
+        selectedCategories.includes(item.category)
+      );
+    }
+
+    setFilteredItems(filtered);
+  };
+
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+  };
+
+  const handleCategorySelect = (categories) => {
+    setSelectedCategories(categories);
+  };
+
   const handleMarkerPress = (itemId) => {
     setSelectedItemId(itemId === selectedItemId ? null : itemId);
   };
@@ -36,6 +74,10 @@ const Map = ({ latitude, longitude }) => {
 
   return (
     <View style={styles.container}>
+      <SearchBar 
+        onSearch={handleSearch}
+        onCategorySelect={handleCategorySelect}
+      />
       <MapView
         style={styles.map}
         initialRegion={{
@@ -47,7 +89,7 @@ const Map = ({ latitude, longitude }) => {
         showsUserLocation
         showsMyLocationButton={false}
       >
-        {foundItems.map((item) => (
+        {filteredItems.map((item) => (
           <Marker
             key={item.id}
             coordinate={{
@@ -60,9 +102,9 @@ const Map = ({ latitude, longitude }) => {
           />
         ))}
       </MapView>
-      {foundItems.length > 0 && (
+      {filteredItems.length > 0 && (
         <ItemDetailsBox 
-          items={foundItems} 
+          items={filteredItems} 
           selectedItemId={selectedItemId}
         />
       )}

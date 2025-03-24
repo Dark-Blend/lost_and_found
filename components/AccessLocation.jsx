@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import * as Location from "expo-location";
 import Map from "./Map";
 
-const AccessLocation = () => {
+const AccessLocation = ({ searchQuery, selectedCategories }) => {
   const [location, setLocation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
@@ -45,6 +45,8 @@ const AccessLocation = () => {
           <Map
             latitude={location.coords.latitude}
             longitude={location.coords.longitude}
+            searchQuery={searchQuery}
+            selectedCategories={selectedCategories}
           />
         )
       )}
