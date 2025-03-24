@@ -1,5 +1,5 @@
 import { FIREBASE_DB } from "../firebaseConfig";
-import { collection, setDoc, doc, getDoc, updateDoc, getDocs, query, orderBy, limit, where, deleteDoc } from "firebase/firestore";
+import { collection, setDoc, doc, getDoc, updateDoc, getDocs, query, orderBy, limit, where, deleteDoc, addDoc, serverTimestamp } from "firebase/firestore";
 
 export const createUser = async (userData , userId) => {
     try {
@@ -275,6 +275,101 @@ export const getAllFoundItems = async () => {
     return items;
   } catch (error) {
     console.error("Error getting all found items:", error);
+    throw error;
+  }
+};
+
+// Chat functions
+export const sendMessage = async (senderId, receiverId, message) => {
+  try {
+    const chatId = [senderId, receiverId].sort().join('_');
+    
+    // First, ensure the chat document exists
+    const chatDocRef = doc(FIREBASE_DB, 'chats', chatId);
+    const chatDoc = await getDoc(chatDocRef);
+    
+    if (!chatDoc.exists()) {
+      // Create the chat document if it doesn't exist
+      await setDoc(chatDocRef, {
+        participants: [senderId, receiverId],
+        createdAt: serverTimestamp(),
+        lastMessage: message,
+        lastMessageTime: serverTimestamp()
+      });
+    } else {
+      // Update the last message
+      await updateDoc(chatDocRef, {
+        lastMessage: message,
+        lastMessageTime: serverTimestamp()
+      });
+    }
+
+    // Add the message to the messages subcollection
+    const messageData = {
+      senderId,
+      text: message,
+      createdAt: serverTimestamp(),
+    };
+
+    await addDoc(collection(FIREBASE_DB, `chats/${chatId}/messages`), messageData);
+  } catch (error) {
+    console.error('Error sending message:', error);
+    throw error;
+  }
+};
+
+export const getMessages = async (userId1, userId2) => {
+  try {
+    const chatId = [userId1, userId2].sort().join('_');
+    const messagesRef = collection(FIREBASE_DB, `chats/${chatId}/messages`);
+    const q = query(messagesRef, orderBy('createdAt', 'asc'));
+    const querySnapshot = await getDocs(q);
+    
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate(),
+    }));
+  } catch (error) {
+    console.error('Error getting messages:', error);
+    throw error;
+  }
+};
+
+export const getUserChats = async (userId) => {
+  try {
+    // Query chats where the user is a participant
+    const chatsRef = collection(FIREBASE_DB, 'chats');
+    const q = query(
+      chatsRef,
+      where('participants', 'array-contains', userId),
+      orderBy('lastMessageTime', 'desc')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const userChats = [];
+
+    for (const doc of querySnapshot.docs) {
+      const chatData = doc.data();
+      // Find the other participant's ID
+      const otherUserId = chatData.participants.find(id => id !== userId);
+      
+      // Get the other user's details
+      const otherUser = await getUser(otherUserId);
+      
+      if (otherUser) {
+        userChats.push({
+          id: doc.id,
+          otherUser,
+          lastMessage: chatData.lastMessage,
+          lastMessageTime: chatData.lastMessageTime?.toDate(),
+        });
+      }
+    }
+
+    return userChats;
+  } catch (error) {
+    console.error('Error getting user chats:', error);
     throw error;
   }
 };

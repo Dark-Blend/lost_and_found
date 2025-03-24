@@ -57,7 +57,6 @@ const Map = ({ latitude, longitude }) => {
             pinColor="red"
             onPress={() => handleMarkerPress(item.id)}
             title={item.itemName}
-            description={item.description}
           />
         ))}
       </MapView>

@@ -9,6 +9,7 @@ import filter from '../assets/icons/filter.png'
 import plus from '../assets/icons/plus.png'
 import close from '../assets/icons/close.png'
 import edit from '../assets/icons/edit.png'
+import paperplane from '../assets/icons/paperplane.png'
 
 export const icons = {
     rightarrow,
@@ -21,5 +22,6 @@ export const icons = {
     filter,
     plus,
     close,
-    edit
+    edit,
+    paperplane
 }

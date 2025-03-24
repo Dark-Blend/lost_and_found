@@ -75,8 +75,18 @@ const PostDetails = () => {
   };
 
   const handleChat = () => {
-    // Navigate to chat screen with the owner
-    router.push(`/chat/${owner.id}`);
+    if (!post || !owner) {
+      Alert.alert("Error", "Could not start chat at this time");
+      return;
+    }
+
+    if (currentUser.uid === post.foundBy) {
+      Alert.alert("Error", "You cannot chat with yourself");
+      return;
+    }
+
+    // Navigate to chat screen with the finder's ID
+    router.push(`/chat/${post.foundBy}`);
   };
 
   if (loading) {
@@ -184,7 +194,7 @@ const PostDetails = () => {
         ) : (
           <TouchableOpacity
             onPress={handleChat}
-            className="bg-blue-500 px-4 py-3 rounded-lg mt-4"
+            className="bg-black px-4 py-3 rounded-lg mt-4"
           >
             <Text className="text-white font-poppins-semibold text-center">
               Chat with Finder
