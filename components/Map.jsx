@@ -51,7 +51,7 @@ const Map = ({ latitude, longitude, searchQuery: initialSearchQuery, selectedCat
     // Apply category filter
     if (selectedCategories.length > 0) {
       filtered = filtered.filter(item =>
-        selectedCategories.includes(item.category)
+        item.categories.some(category => selectedCategories.includes(category))
       );
     }
 

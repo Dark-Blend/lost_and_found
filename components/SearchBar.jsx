@@ -21,8 +21,8 @@ const SearchBar = ({ onSearch, onCategorySelect }) => {
   };
 
   return (
-    <View className="absolute top-0 w-full z-10">
-      <View className="p-2 flex flex-row gap-2 p-3">
+    <View className="absolute top-0 w-full z-10 ">
+      <View className="p-2 flex flex-row gap-2 p-3 h-[80px]">
         <View className="h-full relative flex-1">
           <TextInput
             placeholder="Something lost? Find it here"
