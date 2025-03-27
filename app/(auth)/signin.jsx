@@ -8,6 +8,8 @@ import { router, Link } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { SignIn } from "../../services/authService";
 import { useGlobalContext } from "../../context/GlobalProvider";
+import { doc, getDoc } from "firebase/firestore";
+import { FIREBASE_DB } from "../../firebaseConfig";
 
 const signin = () => {
   const { setCurrentUser } = useGlobalContext();
@@ -29,11 +31,32 @@ const signin = () => {
     }
     setLoading(true);
     try {
-      const user = await SignIn(form.email, form.password);
-      if (user) {
-        setCurrentUser(user.user);
-        Alert.alert("Success", "Sign in successful");
-        router.replace("/home");
+      const userCredential = await SignIn(form.email, form.password);
+      if (userCredential) {
+        // Fetch user data from Firestore
+        const userDoc = await getDoc(doc(FIREBASE_DB, "users", userCredential.user.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          // Merge Firebase Auth user with Firestore data
+          const userWithRole = {
+            ...userCredential.user,
+            role: userData.role || 'user'
+          };
+          console.log("User signed in with role:", userWithRole.role);
+          setCurrentUser(userWithRole);
+          Alert.alert("Success", "Sign in successful");
+          
+          // Redirect based on role
+          if (userData.role === 'admin') {
+            router.replace("/admin/users");
+          } else {
+            router.replace("/home");
+          }
+        } else {
+          console.error("User document not found in Firestore");
+          setCurrentUser(userCredential.user);
+          router.replace("/home");
+        }
       }
     } catch (error) {
       Alert.alert("Error", error.message);
