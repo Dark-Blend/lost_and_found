@@ -9,7 +9,7 @@ const TabIcon = ({ icon, focused }) => {
   return (
     <View
       className={`flex rounded-full h-16  items-center justify-center ${
-        focused ? 'bg-black w-32 flex-2' : 'bg-[##0000001a] w-20'
+        focused ? 'bg-black w-20 flex-2' : 'bg-[##0000001a] w-20'
       }`}
     >
       <Image
@@ -47,6 +47,14 @@ const TabsLayout = () => {
             title: 'Add',
             headerShown: false,
             tabBarIcon: ({ focused }) => TabIcon({ icon: icons.plus, focused }),
+          }}
+        />
+        <Tabs.Screen
+          name="lost"
+          options={{
+            title: 'Lost Items',
+            headerShown: false,
+            tabBarIcon: ({ focused }) => TabIcon({ icon: icons.search, focused }),
           }}
         />
         <Tabs.Screen

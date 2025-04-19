@@ -9,43 +9,52 @@ import {
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { getFoundItemById, getUser, deleteFoundItem } from '../../services/databaseService';
+import { getFoundItemById, getUser, deleteFoundItem, checkMatchingFoundItems } from '../../services/databaseService';
 import { StatusBar } from 'expo-status-bar';
 import { useGlobalContext } from '../../context/GlobalProvider';
 
 const PostDetails = () => {
   const { id } = useLocalSearchParams();
+  const [item, setItem] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [matchingItems, setMatchingItems] = useState([]);
   const router = useRouter();
   const { currentUser } = useGlobalContext();
   const [post, setPost] = useState(null);
   const [owner, setOwner] = useState(null);
   const [claimer, setClaimer] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadPostDetails();
-  }, [id]);
-
-  const loadPostDetails = async () => {
-    try {
-      const postData = await getFoundItemById(id);
-      setPost(postData);
-
-      // Load owner details
-      const ownerData = await getUser(postData.foundBy);
-      setOwner(ownerData);
-
-      // Load claimer details if exists
-      if (postData.claimedBy) {
-        const claimerData = await getUser(postData.claimedBy);
-        setClaimer(claimerData);
+    const loadItem = async () => {
+      try {
+        const docRef = doc(FIREBASE_DB, 'foundItems', id);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          const itemData = { id: docSnap.id, ...docSnap.data() };
+          setItem(itemData);
+          setPost(itemData);
+          
+          // If this is a lost item, check for matching found items
+          if (itemData.type === 'lost') {
+            const matches = await checkMatchingFoundItems(itemData);
+            setMatchingItems(matches);
+          }
+        } else {
+          Alert.alert('Error', 'Item not found');
+          router.back();
+        }
+      } catch (error) {
+        console.error('Error loading item:', error);
+        Alert.alert('Error', 'Failed to load item');
+        router.back();
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error loading post details:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    loadItem();
+  }, [id]);
 
   const handleDelete = () => {
     Alert.alert(
@@ -87,6 +96,10 @@ const PostDetails = () => {
 
     // Navigate to chat screen with the finder's ID
     router.push(`/chat/${post.foundBy}`);
+  };
+
+  const handleContact = () => {
+    // Implement contact logic here
   };
 
   if (loading) {

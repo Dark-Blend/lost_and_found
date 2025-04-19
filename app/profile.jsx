@@ -8,11 +8,26 @@ import {
   Alert,
   ScrollView,
   ActivityIndicator,
+  FlatList,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useGlobalContext } from "../context/GlobalProvider";
-import { getUser, updateUser } from "../services/databaseService";
-import { SignOut } from "../services/authService";
+import {
+  getUser,
+  getNotifications,
+  markNotificationAsRead,
+  updateUser,
+} from "../services/databaseService";
+import { deleteUser } from "../services/deleteUser";
+import {
+  SignOut,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+} from "../services/authService";
+import { FIREBASE_AUTH } from "../firebaseConfig";
 import * as ImagePicker from "expo-image-picker";
 import { StatusBar } from "expo-status-bar";
 import { icons } from "../constants/icons";
@@ -99,19 +114,101 @@ const Profile = () => {
   const router = useRouter();
   const { currentUser } = useGlobalContext();
   const [user, setUser] = useState(null);
+  const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [bio, setBio] = useState("");
   const [avatar, setAvatar] = useState(null);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [username, setUsername] = useState("");
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [password, setPassword] = useState("");
+
+  const styles = {
+    notificationsContainer: {
+      marginTop: 20,
+      flex: 1,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      padding: 16,
+    },
+    notificationItem: {
+      backgroundColor: "#fff",
+      padding: 16,
+      borderRadius: 8,
+      marginBottom: 12,
+      marginHorizontal: 16,
+      borderWidth: 1,
+      borderColor: "#eee",
+    },
+    unreadNotification: {
+      backgroundColor: "#f0f8ff",
+      borderColor: "#007AFF",
+    },
+    notificationTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      marginBottom: 4,
+    },
+    notificationMessage: {
+      fontSize: 14,
+      color: "#666",
+      marginBottom: 8,
+    },
+    notificationTime: {
+      fontSize: 12,
+      color: "#999",
+    },
+    emptyContainer: {
+      padding: 20,
+      alignItems: "center",
+    },
+    emptyText: {
+      fontSize: 16,
+      color: "#666",
+    },
+  };
 
   useEffect(() => {
-    if (currentUser) {
-      loadUserData();
-    }
-  }, [currentUser]);
+    loadUserProfile();
+    loadNotifications();
+  }, []);
 
-  const loadUserData = async () => {
+  const loadNotifications = async () => {
+    if (!currentUser) return;
+
+    try {
+      const userNotifications = await getNotifications(currentUser.uid);
+      setNotifications(userNotifications);
+    } catch (error) {
+      console.error("Error loading notifications:", error);
+    }
+  };
+
+  const handleNotificationPress = async (notification) => {
+    try {
+      // Mark notification as read
+      if (!notification.read) {
+        await markNotificationAsRead(notification.id);
+        // Update local state
+        setNotifications((prevNotifications) =>
+          prevNotifications.map((n) =>
+            n.id === notification.id ? { ...n, read: true } : n
+          )
+        );
+      }
+
+      // Navigate to the relevant item
+      if (notification.type === "match" && notification.itemId) {
+        router.push(`/post/${notification.itemId}`);
+      }
+    } catch (error) {
+      console.error("Error handling notification:", error);
+    }
+  };
+
+  const loadUserProfile = async () => {
     try {
       const userData = await getUser(currentUser.uid);
       if (userData) {
@@ -302,21 +399,153 @@ const Profile = () => {
       </View>
 
       {/* Posts Section */}
-      {
-        user?.role === "user" && (
-          <UserPosts userId={currentUser.uid} />
-        )
-      }
+      {user?.role === "user" && <UserPosts userId={currentUser.uid} />}
 
       {/* Footer Section */}
-      <View className="px-5 py-4">
+      <View className="px-5 py-4  flex-row gap-2">
         <TouchableOpacity
           onPress={handleLogout}
-          className="bg-red-500 w-full px-6 py-3 rounded-lg"
+          className="bg-red-500 px-6 py-3 rounded-lg w-[85%]"
         >
           <Text className="font-semibold text-white text-center">Logout</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => {
+            Alert.alert(
+              "Delete Account",
+              "Are you sure you want to delete your account? This action cannot be undone.",
+              [
+                {
+                  text: "Cancel",
+                  style: "cancel",
+                },
+                {
+                  text: "Delete",
+                  style: "destructive",
+                  onPress: () => {
+                    setShowPasswordModal(true);
+                  },
+                },
+              ],
+              { cancelable: true }
+            );
+          }}
+          className="bg-gray-200 border border-red-500 flex-1 items-center justify-center rounded-lg"
+        >
+          <Image
+            source={icons.trash}
+            className="w-[30px] h-[30px]"
+            tintColor="red"
+          />
+        </TouchableOpacity>
       </View>
+
+      {/* Password Confirmation Modal */}
+      <Modal
+        visible={showPasswordModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowPasswordModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          className="flex-1 justify-center items-center bg-black/50"
+        >
+          <View className="bg-white w-[90%] rounded-xl p-4">
+            <Text className="font-poppins-semibold text-lg mb-4">
+              Confirm with Password
+            </Text>
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Enter your password"
+              secureTextEntry
+              className="bg-gray-100 p-3 rounded-lg mb-4"
+            />
+            <View className="flex-row gap-2">
+              <TouchableOpacity
+                onPress={() => {
+                  setShowPasswordModal(false);
+                  setPassword("");
+                }}
+                className="flex-1 bg-gray-200 p-3 rounded-lg"
+              >
+                <Text className="text-center font-poppins-semibold">
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={async () => {
+                  if (!password) {
+                    Alert.alert("Error", "Password is required");
+                    return;
+                  }
+
+                  setLoading(true);
+
+                  try {
+                    const user = FIREBASE_AUTH.currentUser;
+                    if (!user) {
+                      Alert.alert(
+                        "Error",
+                        "User not found. Please try logging in again."
+                      );
+                      return;
+                    }
+
+                    // Step 1: Re-authenticate user
+                    const credential = EmailAuthProvider.credential(
+                      user.email,
+                      password
+                    );
+                    await reauthenticateWithCredential(user, credential);
+
+                    // Step 2: Delete user data from Firestore
+                    // We need to do this before deleting the auth user
+                    // because we need the user to be authenticated
+                    await deleteUser(currentUser.uid);
+                    
+                    // Step 3: Delete Firebase auth user
+                    // This will automatically sign out the user
+                    await user.delete();
+                    
+                    // Step 4: Navigate to login
+                    router.replace("/signin");
+                  } catch (error) {
+                    
+                    if (error.code === "auth/wrong-password" || 
+                        error.code === "auth/invalid-credential") {
+                      Alert.alert("Error", "Incorrect password. Please try again.");
+                    } else {
+                      Alert.alert(
+                        "Error",
+                        "Failed to delete account. Please try again."
+                      );
+                    }
+                  } finally {
+                    setLoading(false);
+                    setShowPasswordModal(false);
+                    setPassword("");
+                  }
+                }}
+                disabled={loading}
+                className={`flex-1 p-3 rounded-lg ${
+                  loading ? "bg-red-300" : "bg-red-500"
+                }`}
+              >
+                {loading ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <Text className="text-center font-poppins-semibold text-white">
+                    Delete Account
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 };

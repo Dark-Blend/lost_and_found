@@ -59,7 +59,7 @@ const convertImageToBase64 = async (uri) => {
 
 export const addFoundItem = async (itemData) => {
   try {
-    const foundItemsRef = collection(FIREBASE_DB, "foundItems");
+    const foundItemsRef = collection(FIREBASE_DB, 'foundItems');
     const newItemRef = doc(foundItemsRef);
     const itemId = newItemRef.id;
 
@@ -72,14 +72,212 @@ export const addFoundItem = async (itemData) => {
       id: itemId,
       images: base64Images,
       createdAt: new Date(),
+      type: 'found'
+    });
+    
+    // Check for matching lost items and create notifications
+    const lostItemsRef = collection(FIREBASE_DB, 'foundItems');
+    const q = query(lostItemsRef, 
+      where('type', '==', 'lost'),
+      where('categories', 'array-contains-any', itemData.categories)
+    );
+    const querySnapshot = await getDocs(q);
+    
+    querySnapshot.forEach(async (doc) => {
+      const lostItem = doc.data();
+      // If location is available, check distance
+      if (itemData.location && lostItem.location) {
+        const distance = calculateDistance(
+          itemData.location.latitude,
+          itemData.location.longitude,
+          lostItem.location.latitude,
+          lostItem.location.longitude
+        );
+        
+        // If within 1km, create notification
+        if (distance <= 1) {
+          await createNotification(lostItem.userId, {
+            type: 'match',
+            title: 'Potential Match Found',
+            message: `A found item matches your lost item "${lostItem.title}"`,
+            itemId: itemId
+          });
+        }
+      } else {
+        // If no location, create notification based on category match
+        await createNotification(lostItem.userId, {
+          type: 'match',
+          title: 'Potential Match Found',
+          message: `A found item matches your lost item "${lostItem.title}"`,
+          itemId: itemId
+        });
+      }
     });
     
     return itemId;
   } catch (error) {
-    console.error("Error adding found item:", error);
+    console.error('Error adding found item:', error);
     throw error;
   }
 };
+
+export const createNotification = async (userId, data) => {
+  try {
+    const notificationsRef = collection(FIREBASE_DB, 'notifications');
+    await addDoc(notificationsRef, {
+      userId,
+      ...data,
+      createdAt: new Date(),
+      read: false
+    });
+  } catch (error) {
+    console.error('Error creating notification:', error);
+    throw error;
+  }
+};
+
+export const getNotifications = async (userId) => {
+  try {
+    const notificationsRef = collection(FIREBASE_DB, 'notifications');
+    const q = query(
+      notificationsRef,
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    
+    const notifications = [];
+    querySnapshot.forEach((doc) => {
+      notifications.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    return notifications;
+  } catch (error) {
+    console.error('Error getting notifications:', error);
+    throw error;
+  }
+};
+
+export const markNotificationAsRead = async (notificationId) => {
+  try {
+    const notificationRef = doc(FIREBASE_DB, 'notifications', notificationId);
+    await updateDoc(notificationRef, {
+      read: true
+    });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    throw error;
+  }
+};
+
+export const addLostItem = async (itemData) => {
+  try {
+    const lostItemsRef = collection(FIREBASE_DB, "foundItems"); // Using same collection but with type='lost'
+    const newItemRef = doc(lostItemsRef);
+    const itemId = newItemRef.id;
+
+    // Extract base64 data from the images
+    const base64Images = itemData.images.map(image => image.base64);
+
+    // Add the item to Firestore with base64 images
+    await setDoc(newItemRef, {
+      ...itemData,
+      id: itemId,
+      images: base64Images,
+      createdAt: new Date(),
+      type: 'lost'
+    });
+    
+    return itemId;
+  } catch (error) {
+    console.error("Error adding lost item:", error);
+    throw error;
+  }
+};
+
+export const getLostItems = async () => {
+  try {
+    const itemsRef = collection(FIREBASE_DB, "foundItems");
+    const q = query(itemsRef, where("type", "==", "lost"), orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(q);
+    
+    const items = [];
+    querySnapshot.forEach((doc) => {
+      items.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    return items;
+  } catch (error) {
+    console.error("Error getting lost items:", error);
+    throw error;
+  }
+};
+
+export const checkMatchingFoundItems = async (lostItem) => {
+  try {
+    const itemsRef = collection(FIREBASE_DB, "foundItems");
+    const q = query(itemsRef, 
+      where("type", "==", "found"),
+      where("categories", "array-contains-any", lostItem.categories)
+    );
+    const querySnapshot = await getDocs(q);
+    
+    const matchingItems = [];
+    querySnapshot.forEach((doc) => {
+      const foundItem = {
+        id: doc.id,
+        ...doc.data()
+      };
+      
+      // Check if location is within reasonable distance if both items have location
+      if (lostItem.location?.latitude && foundItem.location?.latitude) {
+        const distance = calculateDistance(
+          lostItem.location.latitude,
+          lostItem.location.longitude,
+          foundItem.location.latitude,
+          foundItem.location.longitude
+        );
+        
+        // If within 1km, consider it a potential match
+        if (distance <= 1) {
+          matchingItems.push(foundItem);
+        }
+      } else {
+        // If no location, just add it as a category match
+        matchingItems.push(foundItem);
+      }
+    });
+    
+    return matchingItems;
+  } catch (error) {
+    console.error("Error checking matching items:", error);
+    throw error;
+  }
+};
+
+// Helper function to calculate distance between two points in km
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Radius of the earth in km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2); 
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  const d = R * c; // Distance in km
+  return d;
+}
+
+function deg2rad(deg) {
+  return deg * (Math.PI/180);
+}
 
 export const updateUser = async (userId, userData) => {
   try {
@@ -124,19 +322,49 @@ export const addKarma = async (userId, amount, reason) => {
 
 export const getKarmaLeaderboard = async () => {
   try {
-    const karmaRef = collection(FIREBASE_DB, "karma");
-    const q = query(karmaRef, orderBy("timestamp", "desc"), limit(100));
-    const querySnapshot = await getDocs(q);
+    // First get all users
+    const usersRef = collection(FIREBASE_DB, "users");
+    const usersSnapshot = await getDocs(usersRef);
+    const users = {};
     
-    const karmaList = [];
-    querySnapshot.forEach((doc) => {
-      karmaList.push({
+    usersSnapshot.forEach((doc) => {
+      const userData = doc.data();
+      users[doc.id] = {
         id: doc.id,
-        ...doc.data()
-      });
+        username: userData.username,
+        avatar: userData.avatar,
+        totalKarma: 0,
+        foundItems: 0,
+        returnedItems: 0
+      };
     });
+
+    // Get all karma transactions
+    const karmaRef = collection(FIREBASE_DB, "karma");
+    const karmaSnapshot = await getDocs(karmaRef);
     
-    return karmaList;
+    // Aggregate karma for each user
+    karmaSnapshot.forEach((doc) => {
+      const karma = doc.data();
+      if (users[karma.userId]) {
+        users[karma.userId].totalKarma += karma.amount;
+        if (karma.reason.includes('found')) {
+          users[karma.userId].foundItems++;
+        } else if (karma.reason.includes('returned')) {
+          users[karma.userId].returnedItems++;
+        }
+      }
+    });
+
+    // Convert to array and sort by total karma
+    const leaderboard = Object.values(users)
+      .sort((a, b) => b.totalKarma - a.totalKarma)
+      .map((user, index) => ({
+        ...user,
+        rank: index + 1
+      }));
+    
+    return leaderboard;
   } catch (error) {
     console.error("Error getting karma leaderboard:", error);
     throw error;

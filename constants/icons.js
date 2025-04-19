@@ -12,6 +12,7 @@ import edit from '../assets/icons/edit.png'
 import paperplane from '../assets/icons/paperplane.png'
 import users from '../assets/icons/users.png'
 import posts from '../assets/icons/posts.png'
+import trash from '../assets/icons/trash.png'
 
 export const icons = {
     rightarrow,
@@ -27,5 +28,6 @@ export const icons = {
     edit,
     paperplane,
     users,
-    posts
+    posts,
+    trash
 }

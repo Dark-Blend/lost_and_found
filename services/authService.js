@@ -1,4 +1,4 @@
-import { createUserWithEmailAndPassword , signInWithEmailAndPassword , onAuthStateChanged, signOut as firebaseSignOut, clearPersistence } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut as firebaseSignOut, clearPersistence, EmailAuthProvider, reauthenticateWithCredential as firebaseReauthenticate } from "firebase/auth";
 import { FIREBASE_AUTH } from "../firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 import { FIREBASE_DB } from "../firebaseConfig";
@@ -84,3 +84,13 @@ export const SignOut = async () => {
     throw new Error("Failed to sign out. Please try again.");
   }
 };
+
+export const reauthenticateWithCredential = async (user, credential) => {
+  try {
+    return await firebaseReauthenticate(user, credential);
+  } catch (error) {
+    throw error;
+  }
+};
+
+export { EmailAuthProvider };

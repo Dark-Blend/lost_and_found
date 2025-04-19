@@ -4,39 +4,40 @@ import { StatusBar } from 'expo-status-bar';
 import { getKarmaLeaderboard } from '../../services/databaseService';
 import { useGlobalContext } from '../../context/GlobalProvider';
 
-const KarmaItem = ({ item }) => (
-  <View className="flex-row items-center justify-between p-4 border-b border-gray-200">
-    <View className="flex-row items-center gap-3">
+const LeaderboardItem = ({ item, currentUserId }) => (
+  <View className={`flex-row items-center p-4 border-b border-gray-100 ${item.id === currentUserId ? 'bg-blue-50' : ''}`}>
+    <Text className="font-poppins-bold text-lg w-10 text-gray-500">#{item.rank}</Text>
+    <View className="flex-row flex-1 items-center gap-3">
       <Image
-        source={{ uri: item.userAvatar }}
-        className="w-12 h-12 rounded-full"
+        source={{ uri: item.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(item.username) }}
+        className="w-12 h-12 rounded-full bg-gray-200"
       />
-      <View>
+      <View className="flex-1">
         <Text className="font-poppins-semibold text-lg">{item.username}</Text>
-        <Text className="font-poppins text-gray-500">{item.reason}</Text>
-        <Text className="font-poppins-light text-xs text-gray-400">
-          {new Date(item.timestamp.toDate()).toLocaleDateString()}
+        <Text className="font-poppins-light text-sm text-gray-500">
+          Found: {item.foundItems} · Returned: {item.returnedItems}
         </Text>
       </View>
+      <View className="items-end">
+        <Text className="font-poppins-bold text-xl text-blue-500">{item.totalKarma}</Text>
+        <Text className="font-poppins-light text-xs text-gray-400">karma points</Text>
+      </View>
     </View>
-    <Text className={`font-poppins-bold text-xl ${item.amount > 0 ? 'text-green-500' : 'text-red-500'}`}>
-      {item.amount > 0 ? '+' : ''}{item.amount}
-    </Text>
   </View>
 );
 
 const Karma = () => {
-  const [karmaList, setKarmaList] = useState([]);
+  const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { currentUser } = useGlobalContext();
 
-  const loadKarma = async () => {
+  const loadLeaderboard = async () => {
     try {
-      const karma = await getKarmaLeaderboard();
-      setKarmaList(karma);
+      const data = await getKarmaLeaderboard();
+      setLeaderboard(data);
     } catch (error) {
-      console.error('Error loading karma:', error);
+      console.error('Error loading leaderboard:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -44,12 +45,12 @@ const Karma = () => {
   };
 
   useEffect(() => {
-    loadKarma();
+    loadLeaderboard();
   }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadKarma();
+    loadLeaderboard();
   };
 
   if (loading) {
@@ -60,25 +61,32 @@ const Karma = () => {
     );
   }
 
+  const userRank = leaderboard.find(item => item.id === currentUser?.id)?.rank || 'N/A';
+
   return (
     <View className="flex-1 bg-white">
       <StatusBar hidden />
       <View className="p-4 border-b border-gray-200">
         <Text className="font-poppins-bold text-2xl">Karma Leaderboard</Text>
         <Text className="font-poppins-light text-gray-500">
-          See who's been helping the community
+          Your rank: #{userRank}
         </Text>
       </View>
       <FlatList
-        data={karmaList}
-        renderItem={({ item }) => <KarmaItem item={item} />}
+        data={leaderboard}
+        renderItem={({ item }) => (
+          <LeaderboardItem 
+            item={item} 
+            currentUserId={currentUser?.id}
+          />
+        )}
         keyExtractor={(item) => item.id}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         ListEmptyComponent={
           <View className="flex-1 justify-center items-center p-4">
-            <Text className="font-poppins-light text-gray-500">No karma records yet</Text>
+            <Text className="font-poppins-light text-gray-500">No users yet</Text>
           </View>
         }
       />

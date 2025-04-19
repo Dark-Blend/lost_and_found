@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, ActivityIndicator, Alert, ScrollView } fr
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, getDoc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { FIREBASE_DB } from '../../../firebaseConfig';
+import { FIREBASE_AUTH } from '../../../firebaseConfig';
+import { deleteUser } from 'firebase/auth';
 import { StatusBar } from 'expo-status-bar';
 
 const UserDetails = () => {
@@ -125,7 +127,19 @@ const UserDetails = () => {
           onPress: async () => {
             try {
               setUpdating(true);
+              // Delete from Firestore
               await deleteDoc(doc(FIREBASE_DB, 'users', id));
+              
+              // Delete from Firebase Auth
+              try {
+                const currentAuthUser = FIREBASE_AUTH.currentUser;
+                if (currentAuthUser) {
+                  await deleteUser(currentAuthUser);
+                }
+              } catch (authError) {
+                console.error('Error deleting user from auth:', authError);
+              }
+
               Alert.alert('Success', 'User has been permanently deleted');
               router.back();
             } catch (error) {
