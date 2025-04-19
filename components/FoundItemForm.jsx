@@ -7,7 +7,7 @@ import CategoryPicker from "./CategoryPicker";
 import Button from "./Button";
 import { addFoundItem } from '../services/databaseService';
 
-const FoundItemForm = ({ onSuccess, userId, userName }) => {
+const FoundItemForm = ({ onSuccess, userId, foundBy }) => {
   const [foundItem, setFoundItem] = useState({
     itemName: "",
     description: "",
@@ -18,7 +18,7 @@ const FoundItemForm = ({ onSuccess, userId, userName }) => {
       longitude: null,
     },
     userId: userId,
-    userName: userName,
+    foundBy: userId, // Store the user's ID as foundBy
   });
   const [loading, setLoading] = useState(false);
 
@@ -61,7 +61,7 @@ const FoundItemForm = ({ onSuccess, userId, userName }) => {
         longitude: null,
       },
       userId: userId,
-      userName: userName,
+      username: userName,
     });
 
     // Reset child components

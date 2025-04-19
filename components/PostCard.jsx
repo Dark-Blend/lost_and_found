@@ -20,7 +20,7 @@ const PostCard = ({ item, onUpdateStatus }) => {
 
   return (
     <TouchableOpacity 
-      className="w-[350px] max-h-[320px] bg-white rounded-lg shadow-md m-2 overflow-hidden"
+      className="w-[360px] max-h-[320px] bg-white rounded-lg shadow-md m-2 overflow-hidden"
       onPress={() => router.push(`/post/${item.id}`)}
     >
       <Image 

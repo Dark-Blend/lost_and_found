@@ -72,13 +72,13 @@ export const addFoundItem = async (itemData) => {
       id: itemId,
       images: base64Images,
       createdAt: new Date(),
-      type: 'found'
+      isClaimed: false
     });
     
     // Check for matching lost items and create notifications
-    const lostItemsRef = collection(FIREBASE_DB, 'foundItems');
+    const lostItemsRef = collection(FIREBASE_DB, 'lostItems');
     const q = query(lostItemsRef, 
-      where('type', '==', 'lost'),
+      where('isClaimed', '==', false),
       where('categories', 'array-contains-any', itemData.categories)
     );
     const querySnapshot = await getDocs(q);
@@ -99,8 +99,10 @@ export const addFoundItem = async (itemData) => {
           await createNotification(lostItem.userId, {
             type: 'match',
             title: 'Potential Match Found',
-            message: `A found item matches your lost item "${lostItem.title}"`,
-            itemId: itemId
+            message: `A found item matches your lost item description: ${itemData.itemName}`,
+            itemId: itemId,
+            read: false,
+            createdAt: new Date()
           });
         }
       } else {
@@ -108,8 +110,10 @@ export const addFoundItem = async (itemData) => {
         await createNotification(lostItem.userId, {
           type: 'match',
           title: 'Potential Match Found',
-          message: `A found item matches your lost item "${lostItem.title}"`,
-          itemId: itemId
+          message: `A found item matches your lost item description: ${itemData.itemName}`,
+          itemId: itemId,
+          read: false,
+          createdAt: new Date()
         });
       }
     });
@@ -175,7 +179,7 @@ export const markNotificationAsRead = async (notificationId) => {
 
 export const addLostItem = async (itemData) => {
   try {
-    const lostItemsRef = collection(FIREBASE_DB, "foundItems"); // Using same collection but with type='lost'
+    const lostItemsRef = collection(FIREBASE_DB, "lostItems");
     const newItemRef = doc(lostItemsRef);
     const itemId = newItemRef.id;
 
@@ -188,7 +192,7 @@ export const addLostItem = async (itemData) => {
       id: itemId,
       images: base64Images,
       createdAt: new Date(),
-      type: 'lost'
+      isClaimed: false
     });
     
     return itemId;
@@ -200,8 +204,12 @@ export const addLostItem = async (itemData) => {
 
 export const getLostItems = async () => {
   try {
-    const itemsRef = collection(FIREBASE_DB, "foundItems");
-    const q = query(itemsRef, where("type", "==", "lost"), orderBy("createdAt", "desc"));
+    const lostItemsRef = collection(FIREBASE_DB, "lostItems");
+    const q = query(
+      lostItemsRef,
+      where("isClaimed", "==", false),
+      orderBy("createdAt", "desc")
+    );
     const querySnapshot = await getDocs(q);
     
     const items = [];
@@ -494,10 +502,14 @@ export const getAllFoundItems = async () => {
     
     const items = [];
     querySnapshot.forEach((doc) => {
-      items.push({
-        id: doc.id,
-        ...doc.data()
-      });
+      const data = doc.data();
+      // Only include items that have valid location data
+      if (data.location && data.location.latitude && data.location.longitude) {
+        items.push({
+          id: doc.id,
+          ...data
+        });
+      }
     });
     
     return items;

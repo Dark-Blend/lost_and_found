@@ -12,6 +12,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { getFoundItemById, getUser, deleteFoundItem, checkMatchingFoundItems } from '../../services/databaseService';
 import { StatusBar } from 'expo-status-bar';
 import { useGlobalContext } from '../../context/GlobalProvider';
+import { FIREBASE_DB } from '../../firebaseConfig';
+import { doc, getDoc } from 'firebase/firestore';
 
 const PostDetails = () => {
   const { id } = useLocalSearchParams();
@@ -27,18 +29,28 @@ const PostDetails = () => {
   useEffect(() => {
     const loadItem = async () => {
       try {
-        const docRef = doc(FIREBASE_DB, 'foundItems', id);
-        const docSnap = await getDoc(docRef);
+        // Try to find in foundItems first
+        let docRef = doc(FIREBASE_DB, 'foundItems', id);
+        let docSnap = await getDoc(docRef);
+        
+        // If not found in foundItems, try lostItems
+        if (!docSnap.exists()) {
+          docRef = doc(FIREBASE_DB, 'lostItems', id);
+          docSnap = await getDoc(docRef);
+        }
         
         if (docSnap.exists()) {
           const itemData = { id: docSnap.id, ...docSnap.data() };
           setItem(itemData);
           setPost(itemData);
-          
-          // If this is a lost item, check for matching found items
-          if (itemData.type === 'lost') {
-            const matches = await checkMatchingFoundItems(itemData);
-            setMatchingItems(matches);
+
+          // Load user data for the person who found/lost the item
+          const userDoc = await getDoc(doc(FIREBASE_DB, 'users', itemData.foundBy));
+          if (userDoc.exists()) {
+            setOwner({
+              id: userDoc.id,
+              ...userDoc.data()
+            });
           }
         } else {
           Alert.alert('Error', 'Item not found');
@@ -53,7 +65,9 @@ const PostDetails = () => {
       }
     };
 
-    loadItem();
+    if (id) {
+      loadItem();
+    }
   }, [id]);
 
   const handleDelete = () => {
@@ -164,15 +178,15 @@ const PostDetails = () => {
           ))}
         </View>
 
-        <Text className="text-lg font-poppins-semibold mb-1">Found By</Text>
+        <Text className="text-lg font-poppins-semibold mb-1">{post.type === 'found' ? 'Found By' : 'Lost By'}</Text>
         <View className="flex-row items-center mb-4">
           <Image
-            source={{ uri: owner?.avatar }}
+            source={{ uri: owner?.avatar || 'https://via.placeholder.com/100' }}
             className="w-10 h-10 rounded-full"
           />
           <View className="ml-2">
-            <Text className="font-poppins-semibold">{owner?.username}</Text>
-            <Text className="font-poppins text-gray-500">{owner?.email}</Text>
+            <Text className="font-poppins-semibold">{owner?.username || 'Unknown User'}</Text>
+            <Text className="font-poppins text-gray-500">{owner?.email || ''}</Text>
           </View>
         </View>
 

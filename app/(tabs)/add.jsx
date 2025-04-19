@@ -43,13 +43,13 @@ const Add = () => {
           <FoundItemForm
             onSuccess={handleSuccess}
             userId={currentUser?.uid || ""}
-            userName={currentUser?.displayName || "Anonymous"}
+            foundBy={currentUser?.username || "Anonymous"}
           />
         ) : (
           <LostItemForm
             onSuccess={handleSuccess}
             userId={currentUser?.uid || ""}
-            userName={currentUser?.displayName || "Anonymous"}
+            userName={currentUser?.username || "Anonymous"}
           />
         )}
       </ScrollView>

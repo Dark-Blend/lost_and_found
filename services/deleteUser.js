@@ -8,6 +8,7 @@ export const deleteUser = async (userId) => {
       { name: 'karma', field: 'userId' },
       { name: 'notifications', field: 'userId' },
       { name: 'foundItems', field: 'userId' },
+      { name: 'lostItems', field: 'userId' },
       { name: 'chats', field: 'participants', operator: 'array-contains' },
       { name: 'comments', field: 'userId' },
       { name: 'likes', field: 'userId' },

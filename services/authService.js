@@ -62,10 +62,15 @@ export const getCurrentUser = () => {
   return new Promise((resolve) => {
     onAuthStateChanged(FIREBASE_AUTH, async (user) => {
       if (user) {
-        // Get user role from Firestore
+        // Get user data from Firestore
         const userDoc = await getDoc(doc(FIREBASE_DB, "users", user.uid));
         if (userDoc.exists()) {
-          user.role = userDoc.data().role || "user";
+          const userData = userDoc.data();
+          // Merge Firestore data with auth user data
+          Object.assign(user, {
+            ...userData,
+            role: userData.role || "user",
+          });
         } else {
           user.role = "user";
         }

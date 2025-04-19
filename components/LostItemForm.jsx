@@ -47,13 +47,13 @@ const LostItemForm = ({ onSuccess, userId, userName }) => {
     try {
       setLoading(true);
       const itemData = {
-        title,
+        itemName: title,
         description,
         categories,
         location,
         images,
         userId,
-        userName,
+        foundBy: userId, // Store the user's ID as foundBy
       };
 
       await addLostItem(itemData);
