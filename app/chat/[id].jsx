@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -9,14 +9,25 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-} from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useGlobalContext } from '../../context/GlobalProvider';
-import { getUser, sendMessage, getMessages } from '../../services/databaseService';
-import { StatusBar } from 'expo-status-bar';
-import { icons } from '../../constants/icons';
-import { onSnapshot, collection, query, orderBy, getDoc, doc } from 'firebase/firestore';
-import { FIREBASE_DB } from '../../firebaseConfig';
+} from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useGlobalContext } from "../../context/GlobalProvider";
+import {
+  getUser,
+  sendMessage,
+  getMessages,
+} from "../../services/databaseService";
+import { StatusBar } from "expo-status-bar";
+import { icons } from "../../constants/icons";
+import {
+  onSnapshot,
+  collection,
+  query,
+  orderBy,
+  getDoc,
+  doc,
+} from "firebase/firestore";
+import { FIREBASE_DB } from "../../firebaseConfig";
 
 const ChatScreen = () => {
   const { id } = useLocalSearchParams();
@@ -25,7 +36,7 @@ const ChatScreen = () => {
   const [otherUser, setOtherUser] = useState(null);
   const [otherUserId, setOtherUserId] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const scrollViewRef = useRef();
 
@@ -37,22 +48,24 @@ const ChatScreen = () => {
   const loadOtherUser = async () => {
     try {
       // First get the chat document to find the other user's ID
-      const chatDoc = await getDoc(doc(FIREBASE_DB, 'chats', id));
+      const chatDoc = await getDoc(doc(FIREBASE_DB, "chats", id));
       if (!chatDoc.exists()) {
-        console.error('Chat not found');
+        console.error("Chat not found");
         return;
       }
 
       const chatData = chatDoc.data();
       // Find the other participant's ID
-      const otherUserId = chatData.participants.find(participantId => participantId !== currentUser.uid);
+      const otherUserId = chatData.participants.find(
+        (participantId) => participantId !== currentUser.uid
+      );
       setOtherUserId(otherUserId);
-      
+
       // Get the other user's details
       const userData = await getUser(otherUserId);
       setOtherUser(userData);
     } catch (error) {
-      console.error('Error loading user:', error);
+      console.error("Error loading user:", error);
     } finally {
       setLoading(false);
     }
@@ -60,16 +73,16 @@ const ChatScreen = () => {
 
   const subscribeToMessages = () => {
     const messagesRef = collection(FIREBASE_DB, `chats/${id}/messages`);
-    const q = query(messagesRef, orderBy('createdAt', 'asc'));
+    const q = query(messagesRef, orderBy("createdAt", "asc"));
 
     return onSnapshot(q, (snapshot) => {
-      const newMessages = snapshot.docs.map(doc => ({
+      const newMessages = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate() || new Date(),
       }));
       setMessages(newMessages);
-      
+
       // Scroll to bottom on new messages
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -82,9 +95,9 @@ const ChatScreen = () => {
 
     try {
       await sendMessage(currentUser.uid, otherUserId, message.trim());
-      setMessage('');
+      setMessage("");
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error("Error sending message:", error);
     }
   };
 
@@ -97,52 +110,60 @@ const ChatScreen = () => {
   }
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       className="flex-1 bg-gray-100"
     >
       <StatusBar hidden />
-      
+
       {/* Header */}
       <View className="bg-white py-6  flex-row items-center border-b border-gray-200">
         <TouchableOpacity onPress={() => router.back()} className="mr-4">
           <Image source={icons.back} className="w-6 h-6" />
         </TouchableOpacity>
         <Image
-          source={{ 
-            uri: otherUser?.avatar || 'https://ui-avatars.com/api/?name=U&background=8a524d&color=fff&format=png'
+          source={{
+            uri:
+              otherUser?.avatar ||
+              "https://ui-avatars.com/api/?name=U&background=8a524d&color=fff&format=png",
           }}
           className="w-10 h-10 rounded-full"
         />
         <View className="ml-3">
-          <Text className="font-poppins-bold text-lg">{otherUser?.username || 'User'}</Text>
-          <Text className="font-poppins text-gray-500 text-sm">{otherUser?.email}</Text>
+          <Text className="font-poppins-bold text-lg">
+            {otherUser?.username || "User"}
+          </Text>
+          <Text className="font-poppins text-gray-500 text-sm">
+            {otherUser?.email}
+          </Text>
         </View>
       </View>
 
       {/* Messages */}
-      <ScrollView 
+      <ScrollView
         ref={scrollViewRef}
         className="flex-1 p-4"
-        onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+        onContentSizeChange={() =>
+          scrollViewRef.current?.scrollToEnd({ animated: true })
+        }
       >
         {messages.map((msg) => (
           <View
             key={msg.id}
             className={`mb-4 max-w-[80%] ${
-              msg.senderId === currentUser.uid ? 'self-end' : 'self-start'
+              msg.senderId === currentUser.uid ? "self-end" : "self-start"
             }`}
           >
             <View
               className={`rounded-2xl p-3 ${
                 msg.senderId === currentUser.uid
-                  ? 'bg-black rounded-tr-none'
-                  : 'bg-white rounded-tl-none'
+                  ? "bg-black rounded-tr-none"
+                  : "bg-white rounded-tl-none"
               }`}
             >
               <Text
                 className={`font-poppins ${
-                  msg.senderId === currentUser.uid ? 'text-white' : 'text-black'
+                  msg.senderId === currentUser.uid ? "text-white" : "text-black"
                 }`}
               >
                 {msg.text}
@@ -150,8 +171,8 @@ const ChatScreen = () => {
             </View>
             <Text className="text-xs text-gray-500 mt-1 font-poppins">
               {msg.createdAt.toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
+                hour: "2-digit",
+                minute: "2-digit",
               })}
             </Text>
           </View>
@@ -175,12 +196,12 @@ const ChatScreen = () => {
             onPress={handleSend}
             disabled={!message.trim()}
             className={`rounded-full p-2 ${
-              message.trim() ? 'bg-black' : 'bg-gray-300'
+              message.trim() ? "bg-black" : "bg-gray-300"
             }`}
           >
-            <Image 
-              source={icons.paperplane} 
-              className="w-12 h-12" 
+            <Image
+              source={icons.paperplane}
+              className="w-12 h-12"
               tintColor="white"
             />
           </TouchableOpacity>
@@ -190,4 +211,4 @@ const ChatScreen = () => {
   );
 };
 
-export default ChatScreen; 
+export default ChatScreen;
