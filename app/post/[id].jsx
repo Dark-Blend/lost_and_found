@@ -16,13 +16,24 @@ import { FIREBASE_DB } from '../../firebaseConfig';
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 const PostDetails = () => {
-  const { id } = useLocalSearchParams();
+  const { id, notificationId } = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { currentUser } = useGlobalContext();
   const [post, setPost] = useState(null);
   const [owner, setOwner] = useState(null);
   const [claimer, setClaimer] = useState(null);
+
+  useEffect(() => {
+    // If there's a notificationId, mark it as read when the page loads
+    if (notificationId && currentUser?.uid && id) {
+      markNotificationAsRead(notificationId, id, currentUser.uid)
+        .catch(error => {
+          console.error('Error marking notification as read:', error);
+          Alert.alert('Error', 'Failed to mark notification as read');
+        });
+    }
+  }, [notificationId, currentUser, id]);
 
   const loadPostDetails = async () => {
     try {

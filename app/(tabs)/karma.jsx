@@ -1,7 +1,7 @@
 import { View, Text, FlatList, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { getKarmaLeaderboard } from '../../services/databaseService';
+import { getKarmaLeaderboard, getUserStats } from '../../services/databaseService';
 import { useGlobalContext } from '../../context/GlobalProvider';
 
 const LeaderboardItem = ({ item, currentUserId }) => (
@@ -37,7 +37,20 @@ const Karma = () => {
       const data = await getKarmaLeaderboard();
       // Log the leaderboard data for debugging
       console.log('Leaderboard data:', data);
-      setLeaderboard(data);
+      
+      // Fetch user stats for each user
+      const usersWithStats = await Promise.all(
+        data.map(async (user) => {
+          const stats = await getUserStats(user.id);
+          return {
+            ...user,
+            foundItems: stats.foundItems,
+            returnedItems: stats.returnedItems
+          };
+        })
+      );
+      
+      setLeaderboard(usersWithStats);
     } catch (error) {
       console.error('Error loading leaderboard:', error);
     } finally {

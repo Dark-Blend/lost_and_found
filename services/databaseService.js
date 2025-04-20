@@ -117,6 +117,7 @@ export const addFoundItem = async (itemData) => {
 
     // Increment foundItems counter for the user
     if (itemData.userId) {
+      console.log('Updating foundItems for user:', itemData.userId);
       await updateUserStats(itemData.userId, 'foundItems', 1);
     }
     
@@ -131,36 +132,13 @@ export const addFoundItem = async (itemData) => {
     const notificationPromises = querySnapshot.docs.map(async (doc) => {
       const lostItem = doc.data();
       try {
-        // If location is available, check distance
-        if (itemData.location && lostItem.location) {
-          const distance = calculateDistance(
-            itemData.location.latitude,
-            itemData.location.longitude,
-            lostItem.location.latitude,
-            lostItem.location.longitude
-          );
-          // If within 1km, create notification
-          if (distance <= 1) {
-            await createNotification(lostItem.userId, {
-              type: 'match',
-              title: 'Potential Match Found',
-              message: `A found item matches your lost item description: ${itemData.itemName}`,
-              itemId: itemId,
-              read: false,
-              createdAt: new Date()
-            });
-          }
-        } else {
-          // If no location, create notification based on category match
-          await createNotification(lostItem.userId, {
-            type: 'match',
-            title: 'Potential Match Found',
-            message: `A found item matches your lost item description: ${itemData.itemName}`,
-            itemId: itemId,
-            read: false,
-            createdAt: new Date()
-          });
-        }
+        // Create notification for category match
+        await createNotification(lostItem.userId, {
+          type: 'match',
+          title: 'Potential Match Found',
+          message: `A found item matches your lost item description: ${itemData.itemName}`,
+          itemId: itemId
+        });
       } catch (notifErr) {
         console.error('[Notification Error]', {
           userId: lostItem.userId,
@@ -422,21 +400,25 @@ export const getKarmaLeaderboard = async () => {
     // Get all users with their stats
     const usersRef = collection(FIREBASE_DB, "users");
     const usersSnapshot = await getDocs(usersRef);
-    const users = [];
     
-    usersSnapshot.forEach((doc) => {
+    const userPromises = usersSnapshot.docs.map(async (doc) => {
       const userData = doc.data();
-      // Ensure we have a valid user ID
-      const userId = doc.id || userData.id;
-      users.push({
+      const userId = doc.id;
+      
+      // Get user stats
+      const { foundItems, returnedItems } = await getUserStats(userId);
+      
+      return {
         id: userId,
         username: userData.username,
         avatar: userData.avatar,
         totalKarma: 0,
-        foundItems: userData.foundItems || 0,
-        returnedItems: userData.returnedItems || 0
-      });
+        foundItems,
+        returnedItems
+      };
     });
+
+    const allUsers = await Promise.all(userPromises);
 
     // Get all karma transactions
     const karmaRef = collection(FIREBASE_DB, "karma");
@@ -445,14 +427,14 @@ export const getKarmaLeaderboard = async () => {
     // Aggregate karma for each user
     karmaSnapshot.forEach((doc) => {
       const karma = doc.data();
-      const user = users.find(u => u.id === karma.userId);
+      const user = allUsers.find(u => u.id === karma.userId);
       if (user) {
         user.totalKarma += karma.amount;
       }
     });
 
     // Sort and add rank
-    const leaderboard = users
+    const leaderboard = allUsers
       .sort((a, b) => b.totalKarma - a.totalKarma)
       .map((user, index) => ({
         ...user,
@@ -578,9 +560,11 @@ export const updateFoundItem = async (itemId, itemData) => {
     // Update user's found/returned counters
     if (itemData.claimedBy && !currentItem.claimedBy) {
       // First time being claimed - increment returned count for finder
+      console.log('Updating returnedItems for user:', currentItem.userId);
       await updateUserStats(currentItem.userId, 'returnedItems', 1);
     } else if (!itemData.claimedBy && currentItem.claimedBy) {
       // Item unclaimed - decrement returned count for finder
+      console.log('Updating returnedItems for user:', currentItem.userId);
       await updateUserStats(currentItem.userId, 'returnedItems', -1);
     }
 
@@ -591,20 +575,41 @@ export const updateFoundItem = async (itemId, itemData) => {
   }
 };
 
-export const updateUserStats = async (userId, statType, amount) => {
+export const getUserStats = async (userId) => {
   try {
     const userRef = doc(FIREBASE_DB, "users", userId);
     const userDoc = await getDoc(userRef);
     
     if (!userDoc.exists()) {
-      throw new Error("User not found");
+      return {
+        foundItems: 0,
+        returnedItems: 0
+      };
     }
     
-    // Get current stats
     const userData = userDoc.data();
-    const currentStats = {
+    return {
       foundItems: userData.foundItems || 0,
       returnedItems: userData.returnedItems || 0
+    };
+  } catch (error) {
+    console.error("Error getting user stats:", error);
+    throw error;
+  }
+};
+
+export const updateUserStats = async (userId, statType, amount) => {
+  try {
+    const userRef = doc(FIREBASE_DB, "users", userId);
+    
+    // Get current stats from the user document
+    const userDoc = await getDoc(userRef);
+    const userData = userDoc.data();
+    
+    // Initialize stats if they don't exist
+    const currentStats = {
+      foundItems: userData?.foundItems || 0,
+      returnedItems: userData?.returnedItems || 0
     };
     
     // Update the specific stat
@@ -613,12 +618,13 @@ export const updateUserStats = async (userId, statType, amount) => {
       [statType]: currentStats[statType] + amount
     };
     
-    // Update user document
+    // Update user document with the new stats
     await updateDoc(userRef, {
       foundItems: newStats.foundItems,
       returnedItems: newStats.returnedItems
     });
     
+    console.log('Updated user stats:', { userId, ...newStats });
     return true;
   } catch (error) {
     console.error("Error updating user stats:", error);

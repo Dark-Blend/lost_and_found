@@ -234,7 +234,7 @@ const Profile = () => {
     try {
       // Mark notification as read
       if (!notification.read) {
-        await markNotificationAsRead(notification.id);
+        await markNotificationAsRead(notification.id, notification.itemId, currentUser.uid);
         // Update local state
         setNotifications((prevNotifications) =>
           prevNotifications.map((n) =>
