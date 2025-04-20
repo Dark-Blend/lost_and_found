@@ -46,9 +46,34 @@ const ProfileHeader = ({
   handleImagePick,
   setBio,
   handleUpdateBio,
+  notifications,
+  showNotifications,
+  setShowNotifications,
 }) => (
   <View className="bg-white px-5 pt-10">
-    <View className="items-center mb-6">
+    <View className="items-center mb-6 relative">
+      {/* Notification Bell */}
+      <TouchableOpacity
+        style={{ position: 'absolute', top: 0, right: 0, zIndex: 10 }}
+        onPress={() => setShowNotifications(true)}
+      >
+        <Image source={icons.bell} style={{ width: 28, height: 28 , tintColor:'black' }} />
+        {notifications && notifications.some(n => !n.read) && (
+          <View style={{
+            position: 'absolute',
+            top: 2,
+            right: 2,
+            backgroundColor: 'red',
+            borderRadius: 8,
+            width: 16,
+            height: 16,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}>
+            <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>{notifications.filter(n => !n.read).length}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
       <TouchableOpacity onPress={handleImagePick}>
         <Image
           source={{
@@ -111,6 +136,8 @@ const ProfileHeader = ({
 );
 
 const Profile = () => {
+  // ...existing state
+  const [showNotifications, setShowNotifications] = useState(false);
   const router = useRouter();
   const { currentUser } = useGlobalContext();
   const [user, setUser] = useState(null);
@@ -334,10 +361,70 @@ const Profile = () => {
 
   return (
     <View className="flex-1 flex  justify-between">
+      {/* Notifications Modal */}
+      <Modal visible={showNotifications} animationType="slide" transparent onRequestClose={() => setShowNotifications(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'flex-start' }}>
+          <View style={{ backgroundColor: 'white', marginTop: 80, borderTopLeftRadius: 16, borderTopRightRadius: 16, flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderColor: '#eee' }}>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', flex: 1 }}>Notifications</Text>
+              <TouchableOpacity onPress={() => setShowNotifications(false)}>
+                <Text style={{ fontSize: 18, color: '#007AFF' }}>Close</Text>
+              </TouchableOpacity>
+            </View>
+            {notifications.length === 0 ? (
+              <View style={{ padding: 24, alignItems: 'center' }}>
+                <Text style={{ color: '#666', fontSize: 16 }}>No notifications yet.</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={notifications}
+                keyExtractor={item => item.id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[
+                      { padding: 16, borderBottomWidth: 1, borderColor: '#f0f0f0', backgroundColor: item.read ? '#fff' : '#f0f8ff' },
+                    ]}
+                    onPress={() => {
+                      setShowNotifications(false);
+                      handleNotificationPress(item);
+                    }}
+                  >
+                    <Text style={{ fontWeight: 'bold', color: '#222', marginBottom: 2 }}>{item.title}</Text>
+                    <Text style={{ color: '#555', marginBottom: 2 }}>{item.message}</Text>
+                    <Text style={{ color: '#999', fontSize: 12 }}>{item.createdAt ? new Date(item.createdAt.toDate ? item.createdAt.toDate() : item.createdAt).toLocaleString() : ''}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
       <StatusBar hidden />
       {/* Profile Header Section */}
       <View className="bg-white px-5 pt-10">
-        <View className="items-center mb-6">
+        <View className="items-center mb-6 relative">
+          {/* Notification Bell */}
+          <TouchableOpacity
+            style={{ position: 'absolute', top: 0, right: 0, zIndex: 10 }}
+            onPress={() => setShowNotifications(true)}
+          >
+            <Image source={icons.bell} style={{ width: 28, height: 28 }} />
+            {notifications.some(n => !n.read) && (
+              <View style={{
+                position: 'absolute',
+                top: 2,
+                right: 2,
+                backgroundColor: 'red',
+                borderRadius: 8,
+                width: 16,
+                height: 16,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+                <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>{notifications.filter(n => !n.read).length}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
           <TouchableOpacity onPress={handleImagePick}>
             <Image
               source={{

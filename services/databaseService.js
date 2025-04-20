@@ -1,6 +1,23 @@
 import { FIREBASE_DB } from "../firebaseConfig";
 import { collection, setDoc, doc, getDoc, updateDoc, getDocs, query, orderBy, limit, where, deleteDoc, addDoc, serverTimestamp } from "firebase/firestore";
 
+// Fetch a post by ID from foundItems or lostItems
+export const getPost = async (postId) => {
+  // Try foundItems first
+  let docRef = doc(FIREBASE_DB, "foundItems", postId);
+  let docSnap = await getDoc(docRef);
+  if (docSnap.exists()) {
+    return { ...docSnap.data(), id: docSnap.id, type: 'found' };
+  }
+  // Try lostItems
+  docRef = doc(FIREBASE_DB, "lostItems", postId);
+  docSnap = await getDoc(docRef);
+  if (docSnap.exists()) {
+    return { ...docSnap.data(), id: docSnap.id, type: 'lost' };
+  }
+  throw new Error("Post not found");
+};
+
 export const createUser = async (userData , userId) => {
     try {
       console.log("Attempting to create user with ID:", userId);
@@ -83,19 +100,30 @@ export const addFoundItem = async (itemData) => {
     );
     const querySnapshot = await getDocs(q);
     
-    querySnapshot.forEach(async (doc) => {
+    const notificationPromises = querySnapshot.docs.map(async (doc) => {
       const lostItem = doc.data();
-      // If location is available, check distance
-      if (itemData.location && lostItem.location) {
-        const distance = calculateDistance(
-          itemData.location.latitude,
-          itemData.location.longitude,
-          lostItem.location.latitude,
-          lostItem.location.longitude
-        );
-        
-        // If within 1km, create notification
-        if (distance <= 1) {
+      try {
+        // If location is available, check distance
+        if (itemData.location && lostItem.location) {
+          const distance = calculateDistance(
+            itemData.location.latitude,
+            itemData.location.longitude,
+            lostItem.location.latitude,
+            lostItem.location.longitude
+          );
+          // If within 1km, create notification
+          if (distance <= 1) {
+            await createNotification(lostItem.userId, {
+              type: 'match',
+              title: 'Potential Match Found',
+              message: `A found item matches your lost item description: ${itemData.itemName}`,
+              itemId: itemId,
+              read: false,
+              createdAt: new Date()
+            });
+          }
+        } else {
+          // If no location, create notification based on category match
           await createNotification(lostItem.userId, {
             type: 'match',
             title: 'Potential Match Found',
@@ -105,18 +133,27 @@ export const addFoundItem = async (itemData) => {
             createdAt: new Date()
           });
         }
-      } else {
-        // If no location, create notification based on category match
-        await createNotification(lostItem.userId, {
-          type: 'match',
-          title: 'Potential Match Found',
-          message: `A found item matches your lost item description: ${itemData.itemName}`,
-          itemId: itemId,
-          read: false,
-          createdAt: new Date()
+      } catch (notifErr) {
+        console.error('[Notification Error]', {
+          userId: lostItem.userId,
+          notificationData: {
+            type: 'match',
+            title: 'Potential Match Found',
+            message: `A found item matches your lost item description: ${itemData.itemName}`,
+            itemId: itemId,
+            read: false,
+            createdAt: new Date()
+          },
+          error: notifErr && notifErr.message ? notifErr.message : notifErr
         });
+        if (notifErr && notifErr.code) {
+          console.error('[Notification Firestore Error Code]', notifErr.code);
+        }
+        throw notifErr;
       }
     });
+    // Wait for all notifications to be processed
+    await Promise.all(notificationPromises);
     
     return itemId;
   } catch (error) {
@@ -165,49 +202,19 @@ export const getNotifications = async (userId) => {
   }
 };
 
-export const getClaimedItemDetails = async (postId) => {
-  try {
-    const claimedItemRef = doc(FIREBASE_DB, 'claimedItems', postId);
-    const claimedItemDoc = await getDoc(claimedItemRef);
-
-    if (!claimedItemDoc.exists()) {
-      return null;
-    }
-
-    return {
-      id: claimedItemDoc.id,
-      ...claimedItemDoc.data()
-    };
-  } catch (error) {
-    console.error('Error getting claimed item details:', error);
-    throw error;
-  }
-};
+// getClaimedItemDetails removed: now claim info is stored directly on foundItems
 
 export const markNotificationAsRead = async (notificationId, postId, claimedBy) => {
   try {
     const notificationRef = doc(FIREBASE_DB, 'notifications', notificationId);
     const postRef = doc(FIREBASE_DB, 'foundItems', postId);
 
-    // Update post status
+    // Update post status: claim directly on foundItems
     await updateDoc(postRef, {
-      isClaimed: true
+      isClaimed: true,
+      claimedBy: claimedBy,
+      claimedAt: serverTimestamp()
     });
-
-    // Add to claimed items collection
-    const claimedItemData = {
-      postId,
-      itemName: (await getDoc(postRef)).data().itemName,
-      description: (await getDoc(postRef)).data().description,
-      categories: (await getDoc(postRef)).data().categories,
-      images: (await getDoc(postRef)).data().images,
-      foundBy: (await getDoc(postRef)).data().foundBy,
-      claimedBy,
-      claimedAt: serverTimestamp(),
-      location: (await getDoc(postRef)).data().location
-    };
-
-    await setDoc(doc(FIREBASE_DB, 'claimedItems', postId), claimedItemData);
 
     await updateDoc(notificationRef, {
       read: true
@@ -478,25 +485,6 @@ export const updateFoundItem = async (itemId, itemData) => {
       isClaimed: !!itemData.claimedBy // Ensure isClaimed is updated based on claimedBy
     });
 
-    if (itemData.claimedBy) {
-      // Add to claimed items collection
-      const claimedItemData = {
-        postId: itemId,
-        itemName: itemData.itemName,
-        description: itemData.description,
-        categories: itemData.categories,
-        images: itemData.images,
-        foundBy: itemData.foundBy,
-        claimedBy: itemData.claimedBy,
-        claimedAt: serverTimestamp(),
-        location: itemData.location
-      };
-
-      await setDoc(doc(FIREBASE_DB, 'claimedItems', itemId), claimedItemData);
-    } else {
-      // Remove from claimed items collection
-      await deleteDoc(doc(FIREBASE_DB, 'claimedItems', itemId));
-    }
 
     return true;
   } catch (error) {

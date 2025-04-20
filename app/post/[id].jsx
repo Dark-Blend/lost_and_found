@@ -9,22 +9,19 @@ import {
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { getPost, getUser, getClaimedItemDetails, claimPost, unclaimPost } from '../../services/databaseService';
+import { getPost, getUser, markNotificationAsRead, deleteFoundItem } from '../../services/databaseService';
 import { StatusBar } from 'expo-status-bar';
 import { useGlobalContext } from '../../context/GlobalProvider';
 import { FIREBASE_DB } from '../../firebaseConfig';
-import { doc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 const PostDetails = () => {
   const { id } = useLocalSearchParams();
-  const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [matchingItems, setMatchingItems] = useState([]);
   const router = useRouter();
   const { currentUser } = useGlobalContext();
   const [post, setPost] = useState(null);
   const [owner, setOwner] = useState(null);
-  const [claimedDetails, setClaimedDetails] = useState(null);
   const [claimer, setClaimer] = useState(null);
 
   const loadPostDetails = async () => {
@@ -43,11 +40,11 @@ const PostDetails = () => {
         setOwner(ownerData);
       }
 
-      // Load claimed item details if post is claimed
-      if (postData.isClaimed) {
-        const claimedData = await getClaimedItemDetails(id);
-        if (claimedData) {
-          setClaimedDetails(claimedData);
+      // Load claimer details if post is claimed
+      if (postData.isClaimed && postData.claimedBy) {
+        const claimerData = await getUser(postData.claimedBy);
+        if (claimerData) {
+          setClaimer(claimerData);
         }
       }
     } catch (error) {
@@ -127,10 +124,6 @@ const PostDetails = () => {
     }
   };
 
-  const handleContact = () => {
-    // Implement contact logic here
-  };
-
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center">
@@ -152,20 +145,21 @@ const PostDetails = () => {
       <StatusBar hidden />
       
       {/* Images */}
-      <ScrollView horizontal pagingEnabled className="h-72">
-        {post.images.map((image, index) => (
-          <Image
-            key={index}
-            source={{ uri: `data:image/jpeg;base64,${image}` }}
-            className="w-screen h-72"
-            resizeMode="cover"
-          />
-        ))}
-      </ScrollView>
+      <View className="h-72">
+        <ScrollView horizontal pagingEnabled>
+          {post.images.map((image, index) => (
+            <Image
+              key={index}
+              source={{ uri: `data:image/jpeg;base64,${image}` }}
+              className="w-screen h-72"
+              resizeMode="cover"
+            />
+          ))}
+        </ScrollView>
+      </View>
 
       {/* Content */}
-      <View className="flex-1 h-[76vh]  justify-between p-4">
-      <View className="">
+      <View className="p-4">
         <Text className="text-3xl font-poppins-bold mb-2">{post.itemName}</Text>
         
         <View className="flex-row items-center mb-4">
@@ -175,9 +169,9 @@ const PostDetails = () => {
             <Text className="text-white font-poppins capitalize">
               {post.isClaimed ? 'Claimed' : 'Available'}
             </Text>
-            {post.isClaimed && claimedDetails && (
+            {post.isClaimed && post.claimedAt && (
               <Text className="text-xs text-white font-poppins-light">
-                {new Date(claimedDetails.claimedAt.toDate()).toLocaleString()}
+                {new Date(post.claimedAt.toDate()).toLocaleString()}
               </Text>
             )}
           </View>
@@ -225,33 +219,51 @@ const PostDetails = () => {
             </View>
           </>
         )}
-      </View>
 
-        {/* Action Button */}
-        <View className=''>
-        {currentUser?.uid === post.foundBy ? (
-          <TouchableOpacity
-            onPress={handleDelete}
-            className="bg-red-500 px-4 py-3 rounded-lg mt-4"
-          >
-            <Text className="text-white font-poppins-semibold text-center">
-              Delete Post
-            </Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            onPress={handleChat}
-            className="bg-black px-4 py-3 rounded-lg mt-4"
-          >
-            <Text className="text-white font-poppins-semibold text-center">
-              Chat with Finder
-            </Text>
-          </TouchableOpacity>
-        )}
+        {/* Action Buttons */}
+        <View>
+          {currentUser?.uid === post.foundBy ? (
+            <TouchableOpacity
+              onPress={handleDelete}
+              className="bg-red-500 px-4 py-3 rounded-lg mt-4"
+            >
+              <Text className="text-white font-poppins-semibold text-center">
+                Delete Post
+              </Text>
+            </TouchableOpacity>
+          ) : post.isClaimed ? null : (
+            <TouchableOpacity
+              onPress={async () => {
+                try {
+                  await markNotificationAsRead(null, post.id, currentUser.uid); // null for notificationId if not from notification
+                  Alert.alert('Success', 'You have claimed this item!');
+                  await loadPostDetails();
+                } catch (error) {
+                  Alert.alert('Error', 'Failed to claim item');
+                }
+              }}
+              className="bg-green-600 px-4 py-3 rounded-lg mt-4"
+            >
+              <Text className="text-white font-poppins-semibold text-center">
+                Claim Item
+              </Text>
+            </TouchableOpacity>
+          )}
+          {/* Chat button for non-owners, always available */}
+          {currentUser?.uid !== post.foundBy && (
+            <TouchableOpacity
+              onPress={handleChat}
+              className="bg-black px-4 py-3 rounded-lg mt-4"
+            >
+              <Text className="text-white font-poppins-semibold text-center">
+                Chat with Finder
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </ScrollView>
   );
 };
 
-export default PostDetails; 
+export default PostDetails;

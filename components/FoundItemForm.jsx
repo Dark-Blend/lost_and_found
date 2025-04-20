@@ -17,8 +17,7 @@ const FoundItemForm = ({ onSuccess, userId, foundBy }) => {
       latitude: null,
       longitude: null,
     },
-    userId: userId,
-    foundBy: userId, // Store the user's ID as foundBy
+    foundBy: userId, // Only foundBy is needed
   });
   const [loading, setLoading] = useState(false);
 
@@ -61,7 +60,7 @@ const FoundItemForm = ({ onSuccess, userId, foundBy }) => {
         longitude: null,
       },
       userId: userId,
-      username: userName,
+      foundBy: userId
     });
 
     // Reset child components
@@ -87,14 +86,24 @@ const FoundItemForm = ({ onSuccess, userId, foundBy }) => {
       return;
     }
 
+    setLoading(true);
+    let itemAdded = false;
     try {
-      setLoading(true);
       await addFoundItem(foundItem);
+      itemAdded = true;
       Alert.alert("Success", "Item added successfully");
       resetForm();
-      onSuccess();
+      // Small delay to ensure form clears before navigation
+      setTimeout(() => {
+        onSuccess();
+      }, 200);
     } catch (error) {
-      Alert.alert("Error", "Failed to add item");
+      if (!itemAdded) {
+        Alert.alert("Error", "Failed to add item");
+      } else {
+        // If item was added but something else failed (e.g. notification), show a warning
+        Alert.alert("Warning", "Item added but some notifications may have failed.");
+      }
     } finally {
       setLoading(false);
     }
