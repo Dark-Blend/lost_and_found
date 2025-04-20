@@ -9,9 +9,9 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { getAllUsers } from "../services/databaseService";
+import { getAllUsersExceptCurrent } from "../services/databaseService";
 
-const ClaimPicker = ({ visible, onClose, onSelectUser, currentUserId, foundById }) => {
+const ClaimPicker = ({ visible, onClose, onSelectUser, currentUserId, foundById, claimedBy }) => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -34,7 +34,7 @@ const ClaimPicker = ({ visible, onClose, onSelectUser, currentUserId, foundById 
 
   const loadUsers = async () => {
     try {
-      const allUsers = await getAllUsers();
+      const allUsers = await getAllUsersExceptCurrent(currentUserId);
       setUsers(allUsers);
     } catch (error) {
       console.error("Error loading users:", error);
@@ -63,7 +63,7 @@ const ClaimPicker = ({ visible, onClose, onSelectUser, currentUserId, foundById 
   };
 
   const renderHeader = () => {
-    if (!currentUserId) return null;
+    if (!currentUserId || !claimedBy) return null;
 
     return (
       <TouchableOpacity

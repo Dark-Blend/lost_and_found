@@ -8,7 +8,7 @@ import {
   ScrollView,
   StyleSheet,
 } from "react-native";
-import { getUserFoundItems, getUserLostItems } from "../services/databaseService";
+import { updateFoundItem, getUserFoundItems, getUserLostItems } from "../services/databaseService";
 import PostCard from "./PostCard";
 
 const UserItems = ({ userId }) => {

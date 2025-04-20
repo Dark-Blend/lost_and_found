@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useGlobalContext } from '../context/GlobalProvider';
 import ClaimPicker from './ClaimPicker';
 
 const PostCard = ({ item, onUpdateStatus }) => {
+  const { currentUser } = useGlobalContext();
   const router = useRouter();
   const [showClaimPicker, setShowClaimPicker] = useState(false);
 
@@ -66,8 +68,9 @@ const PostCard = ({ item, onUpdateStatus }) => {
           visible={showClaimPicker}
           onClose={() => setShowClaimPicker(false)}
           onSelectUser={(user) => handleStatusUpdate(user?.id)}
-          currentUserId={item.claimedBy}
-          foundById={item.foundBy}
+          currentUserId={currentUser?.uid}
+          foundById={item.userId}
+          claimedBy={item.claimedBy}
         />
       )}
     </TouchableOpacity>

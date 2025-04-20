@@ -559,6 +559,63 @@ export const updateFoundItem = async (itemId, itemData) => {
   }
 };
 
+export const getAllUsersExceptCurrent = async (currentUserId) => {
+  try {
+    const usersRef = collection(FIREBASE_DB, "users");
+    const querySnapshot = await getDocs(usersRef);
+    const users = [];
+    querySnapshot.forEach((doc) => {
+      const userData = {
+        id: doc.id,
+        ...doc.data()
+      };
+      // Only add users who are not the current user
+      if (userData.id !== currentUserId) {
+        users.push(userData);
+      }
+    });
+    return users;
+  } catch (error) {
+    console.error("Error loading users:", error);
+    throw error;
+  }
+};
+
+export const createChat = async (userId1, userId2, postId) => {
+  try {
+    if (!userId1 || !userId2 || !postId) {
+      throw new Error('Invalid parameters provided');
+    }
+
+    // Sort user IDs to create consistent chat ID
+    const sortedIds = [userId1, userId2].sort();
+    const chatId = `${sortedIds[0]}_${sortedIds[1]}`;
+
+    const chatRef = doc(FIREBASE_DB, 'chats', chatId);
+    const chatSnap = await getDoc(chatRef);
+
+    if (chatSnap.exists()) {
+      // Chat already exists, just return the ID
+      return chatId;
+    }
+
+    // Create new chat
+    await setDoc(chatRef, {
+      userId1,
+      userId2,
+      postId,
+      createdAt: serverTimestamp(),
+      lastMessage: null,
+      lastMessageTimestamp: null
+    });
+
+    return chatId;
+  } catch (error) {
+    console.error('Error creating chat:', error);
+    throw error;
+  }
+};
+
 export const getAllUsers = async () => {
   try {
     const usersRef = collection(FIREBASE_DB, "users");
@@ -638,7 +695,9 @@ export const getAllFoundItems = async () => {
 // Chat functions
 export const sendMessage = async (senderId, receiverId, message, imageBase64 = null) => {
   try {
-    const chatId = [senderId, receiverId].sort().join('_');
+    // Sort user IDs to create consistent chat ID
+    const sortedIds = [senderId, receiverId].sort();
+    const chatId = `${sortedIds[0]}_${sortedIds[1]}`;
     
     // Create last message preview
     const lastMessagePreview = imageBase64 ? '📷 Image' : message;
@@ -650,7 +709,8 @@ export const sendMessage = async (senderId, receiverId, message, imageBase64 = n
     if (!chatDoc.exists()) {
       // Create the chat document if it doesn't exist
       await setDoc(chatDocRef, {
-        participants: [senderId, receiverId],
+        userId1: sortedIds[0],
+        userId2: sortedIds[1],
         createdAt: serverTimestamp(),
         lastMessage: lastMessagePreview,
         lastMessageTime: serverTimestamp()
@@ -678,9 +738,8 @@ export const sendMessage = async (senderId, receiverId, message, imageBase64 = n
   }
 };
 
-export const getMessages = async (userId1, userId2) => {
+export const getMessages = async (chatId) => {
   try {
-    const chatId = [userId1, userId2].sort().join('_');
     const messagesRef = collection(FIREBASE_DB, `chats/${chatId}/messages`);
     const q = query(messagesRef, orderBy('createdAt', 'asc'));
     const querySnapshot = await getDocs(q);
@@ -698,21 +757,36 @@ export const getMessages = async (userId1, userId2) => {
 
 export const getUserChats = async (userId) => {
   try {
-    // Query chats where the user is a participant
+    // Query chats where the user is either userId1 or userId2
     const chatsRef = collection(FIREBASE_DB, 'chats');
     const q = query(
       chatsRef,
-      where('participants', 'array-contains', userId),
+      where('userId1', '==', userId),
       orderBy('lastMessageTime', 'desc')
     );
     
-    const querySnapshot = await getDocs(q);
+    const querySnapshot1 = await getDocs(q);
+    
+    // Query for userId2
+    const q2 = query(
+      chatsRef,
+      where('userId2', '==', userId),
+      orderBy('lastMessageTime', 'desc')
+    );
+    
+    const querySnapshot2 = await getDocs(q2);
+    
+    // Combine both query results
+    const allDocs = [...querySnapshot1.docs, ...querySnapshot2.docs];
     const userChats = [];
-
-    for (const doc of querySnapshot.docs) {
+    
+    // Process all documents
+    for (const doc of allDocs) {
       const chatData = doc.data();
-      // Find the other participant's ID
-      const otherUserId = chatData.participants.find(id => id !== userId);
+      // Get the other user's ID based on userId1 and userId2
+      const otherUserId = chatData.userId1 === userId 
+        ? chatData.userId2 
+        : chatData.userId1;
       
       // Get the other user's details
       const otherUser = await getUser(otherUserId);

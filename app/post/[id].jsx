@@ -99,8 +99,9 @@ const PostDetails = () => {
     }
 
     try {
-      // Create chat ID by combining and sorting both user IDs
-      const chatId = [currentUser.uid, post.foundBy].sort().join('_');
+      // Sort user IDs to create consistent chat ID
+      const sortedIds = [currentUser.uid, post.userId].sort();
+      const chatId = `${sortedIds[0]}_${sortedIds[1]}`;
       
       // Create or get the chat document
       const chatDocRef = doc(FIREBASE_DB, 'chats', chatId);
@@ -109,7 +110,9 @@ const PostDetails = () => {
       if (!chatDoc.exists()) {
         // Create the chat document if it doesn't exist
         await setDoc(chatDocRef, {
-          participants: [currentUser.uid, post.foundBy],
+          userId1: sortedIds[0],
+          userId2: sortedIds[1],
+          postId: post.id,
           createdAt: serverTimestamp(),
           lastMessage: '',
           lastMessageTime: serverTimestamp()
@@ -238,7 +241,7 @@ const PostDetails = () => {
             className="bg-black px-4 py-3 rounded-lg"
           >
             <Text className="text-white font-poppins-semibold text-center">
-              Chat with Finder
+              Chat
             </Text>
           </TouchableOpacity>
         )}

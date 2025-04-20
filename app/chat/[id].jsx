@@ -57,10 +57,10 @@ const ChatScreen = () => {
       }
 
       const chatData = chatDoc.data();
-      // Find the other participant's ID
-      const otherUserId = chatData.participants.find(
-        (participantId) => participantId !== currentUser.uid
-      );
+      // Get the other user's ID based on userId1 and userId2
+      const otherUserId = chatData.userId1 === currentUser.uid 
+        ? chatData.userId2 
+        : chatData.userId1;
       setOtherUserId(otherUserId);
 
       // Get the other user's details
