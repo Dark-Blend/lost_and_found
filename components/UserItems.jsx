@@ -116,9 +116,6 @@ const UserItems = ({ userId }) => {
         {renderTab("Found", () => setActiveTab("found"))}
         {renderTab("Lost", () => setActiveTab("lost"))}
       </View>
-      <Text style={styles.sectionTitle}>
-        {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Items
-      </Text>
       {renderItems()}
     </View>
   );
@@ -152,12 +149,6 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    paddingHorizontal: 16,
-    marginBottom: 10,
   },
   scrollView: {
     paddingHorizontal: 16,

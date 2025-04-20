@@ -57,7 +57,8 @@ const LostItemForm = ({ onSuccess, userId }) => {
         categories,
         location,
         images,
-        userId: userId
+        userId: userId,
+        type: 'lost'
       };
 
       await addLostItem(itemData);

@@ -38,21 +38,25 @@ const PostCard = ({ item, onUpdateStatus }) => {
             {new Date(item.createdAt.toDate()).toLocaleDateString()}
           </Text>
           <View className="flex-row gap-2">
-            <TouchableOpacity
-              onPress={() => setShowClaimPicker(true)}
-              className="bg-blue-500 px-3 py-1 rounded"
-            >
-              <Text className="text-white font-poppins">
-                {item.claimedBy ? 'Update Claim' : 'Claim'}
-              </Text>
-            </TouchableOpacity>
-            <View className={`px-3 py-1 rounded ${
-              item.isClaimed ? 'bg-green-500' : 'bg-yellow-500'
-            }`}>
-              <Text className="text-white font-poppins capitalize">
-                {item.isClaimed ? 'claimed' : 'available'}
-              </Text>
-            </View>
+            {item.type === 'found' && (
+              <>
+                <TouchableOpacity
+                  onPress={() => setShowClaimPicker(true)}
+                  className="bg-blue-500 px-3 py-1 rounded"
+                >
+                  <Text className="text-white font-poppins">
+                    {item.claimedBy ? 'Update Claim' : 'Claim'}
+                  </Text>
+                </TouchableOpacity>
+                <View className={`px-3 py-1 rounded ${
+                  item.isClaimed ? 'bg-green-500' : 'bg-yellow-500'
+                }`}>
+                  <Text className="text-white font-poppins capitalize">
+                    {item.isClaimed ? 'claimed' : 'available'}
+                  </Text>
+                </View>
+              </>
+            )}
           </View>
         </View>
       </View>

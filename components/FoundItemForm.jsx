@@ -22,7 +22,8 @@ const FoundItemForm = ({ onSuccess, userId }) => {
       latitude: null,
       longitude: null,
     },
-    userId: userId
+    userId: userId,
+    type: 'found'
   });
   const [loading, setLoading] = useState(false);
 

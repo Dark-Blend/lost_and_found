@@ -109,6 +109,7 @@ export const addFoundItem = async (itemData) => {
       ...itemData,
       id: itemId,
       images: base64Images,
+      type: 'found',
       createdAt: new Date(),
       isClaimed: false
     });
@@ -272,6 +273,7 @@ export const addLostItem = async (itemData) => {
       ...itemData,
       id: itemId,
       images: base64Images,
+      type: 'lost',
       createdAt: new Date(),
       isClaimed: false
     });
