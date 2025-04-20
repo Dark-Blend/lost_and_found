@@ -105,6 +105,7 @@ export const addFoundItem = async (itemData) => {
     const base64Images = itemData.images.map(image => image.base64);
 
     // Add the item to Firestore with base64 images and userId
+    // Add the item to Firestore with base64 images and userId
     await setDoc(newItemRef, {
       ...itemData,
       id: itemId,
@@ -113,6 +114,11 @@ export const addFoundItem = async (itemData) => {
       createdAt: new Date(),
       isClaimed: false
     });
+
+    // Increment foundItems counter for the user
+    if (itemData.userId) {
+      await updateUserStats(itemData.userId, 'foundItems', 1);
+    }
     
     // Check for matching lost items and create notifications
     const lostItemsRef = collection(FIREBASE_DB, 'lostItems');
@@ -383,7 +389,7 @@ export const updateUser = async (userId, userData) => {
 
 export const addKarma = async (userId, amount, reason) => {
   try {
-    const karmaRef = doc(FIREBASE_DB, "karma", userId);
+    const karmaRef = collection(FIREBASE_DB, "karma");
     const userRef = doc(FIREBASE_DB, "users", userId);
     
     // Get user data
@@ -399,11 +405,11 @@ export const addKarma = async (userId, amount, reason) => {
       username: userData.username,
       amount,
       reason,
-      timestamp: new Date(),
+      timestamp: serverTimestamp(),
       userAvatar: userData.avatar
     };
 
-    await setDoc(karmaRef, karmaData);
+    await addDoc(karmaRef, karmaData);
     return true;
   } catch (error) {
     console.error("Error adding karma:", error);
@@ -413,21 +419,23 @@ export const addKarma = async (userId, amount, reason) => {
 
 export const getKarmaLeaderboard = async () => {
   try {
-    // First get all users
+    // Get all users with their stats
     const usersRef = collection(FIREBASE_DB, "users");
     const usersSnapshot = await getDocs(usersRef);
-    const users = {};
+    const users = [];
     
     usersSnapshot.forEach((doc) => {
       const userData = doc.data();
-      users[doc.id] = {
-        id: doc.id,
+      // Ensure we have a valid user ID
+      const userId = doc.id || userData.id;
+      users.push({
+        id: userId,
         username: userData.username,
         avatar: userData.avatar,
         totalKarma: 0,
-        foundItems: 0,
-        returnedItems: 0
-      };
+        foundItems: userData.foundItems || 0,
+        returnedItems: userData.returnedItems || 0
+      });
     });
 
     // Get all karma transactions
@@ -437,23 +445,22 @@ export const getKarmaLeaderboard = async () => {
     // Aggregate karma for each user
     karmaSnapshot.forEach((doc) => {
       const karma = doc.data();
-      if (users[karma.userId]) {
-        users[karma.userId].totalKarma += karma.amount;
-        if (karma.reason.includes('found')) {
-          users[karma.userId].foundItems++;
-        } else if (karma.reason.includes('returned')) {
-          users[karma.userId].returnedItems++;
-        }
+      const user = users.find(u => u.id === karma.userId);
+      if (user) {
+        user.totalKarma += karma.amount;
       }
     });
 
-    // Convert to array and sort by total karma
-    const leaderboard = Object.values(users)
+    // Sort and add rank
+    const leaderboard = users
       .sort((a, b) => b.totalKarma - a.totalKarma)
       .map((user, index) => ({
         ...user,
         rank: index + 1
       }));
+
+    // Log the leaderboard for debugging
+    console.log('Leaderboard:', leaderboard);
     
     return leaderboard;
   } catch (error) {
@@ -545,16 +552,76 @@ export const getUserFoundItems = async (userId) => {
 export const updateFoundItem = async (itemId, itemData) => {
   try {
     const itemRef = doc(FIREBASE_DB, "foundItems", itemId);
+    const itemDoc = await getDoc(itemRef);
+    const currentItem = itemDoc.data();
+    
+    // Update item data
     await updateDoc(itemRef, {
       ...itemData,
-      updatedAt: new Date(),
+      updatedAt: serverTimestamp(),
       isClaimed: !!itemData.claimedBy // Ensure isClaimed is updated based on claimedBy
     });
 
+    // Handle karma changes
+    if (currentItem.claimedBy !== itemData.claimedBy) {
+      // If there was a previous claimer, remove their karma
+      if (currentItem.claimedBy) {
+        await addKarma(currentItem.claimedBy, -50, 'unclaimed_item');
+      }
+      
+      // If there's a new claimer, add karma to the finder (currentItem.userId)
+      if (itemData.claimedBy) {
+        await addKarma(currentItem.userId, 50, 'claimed_item');
+      }
+    }
+
+    // Update user's found/returned counters
+    if (itemData.claimedBy && !currentItem.claimedBy) {
+      // First time being claimed - increment returned count for finder
+      await updateUserStats(currentItem.userId, 'returnedItems', 1);
+    } else if (!itemData.claimedBy && currentItem.claimedBy) {
+      // Item unclaimed - decrement returned count for finder
+      await updateUserStats(currentItem.userId, 'returnedItems', -1);
+    }
 
     return true;
   } catch (error) {
     console.error("Error updating found item:", error);
+    throw error;
+  }
+};
+
+export const updateUserStats = async (userId, statType, amount) => {
+  try {
+    const userRef = doc(FIREBASE_DB, "users", userId);
+    const userDoc = await getDoc(userRef);
+    
+    if (!userDoc.exists()) {
+      throw new Error("User not found");
+    }
+    
+    // Get current stats
+    const userData = userDoc.data();
+    const currentStats = {
+      foundItems: userData.foundItems || 0,
+      returnedItems: userData.returnedItems || 0
+    };
+    
+    // Update the specific stat
+    const newStats = {
+      ...currentStats,
+      [statType]: currentStats[statType] + amount
+    };
+    
+    // Update user document
+    await updateDoc(userRef, {
+      foundItems: newStats.foundItems,
+      returnedItems: newStats.returnedItems
+    });
+    
+    return true;
+  } catch (error) {
+    console.error("Error updating user stats:", error);
     throw error;
   }
 };

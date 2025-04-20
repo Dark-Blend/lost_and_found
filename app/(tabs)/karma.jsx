@@ -35,6 +35,8 @@ const Karma = () => {
   const loadLeaderboard = async () => {
     try {
       const data = await getKarmaLeaderboard();
+      // Log the leaderboard data for debugging
+      console.log('Leaderboard data:', data);
       setLeaderboard(data);
     } catch (error) {
       console.error('Error loading leaderboard:', error);
@@ -61,7 +63,7 @@ const Karma = () => {
     );
   }
 
-  const userRank = leaderboard.find(item => item.id === currentUser?.id)?.rank || 'N/A';
+  const userRank = leaderboard.find(item => item.id === currentUser?.uid)?.rank;
 
   return (
     <View className="flex-1 bg-white">
@@ -69,7 +71,7 @@ const Karma = () => {
       <View className="p-4 border-b border-gray-200">
         <Text className="font-poppins-bold text-2xl">Karma Leaderboard</Text>
         <Text className="font-poppins-light text-gray-500">
-          Your rank: #{userRank}
+          Your rank: #{userRank || 'N/A'}
         </Text>
       </View>
       <FlatList

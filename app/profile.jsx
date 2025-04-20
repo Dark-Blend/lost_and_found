@@ -52,6 +52,8 @@ const ProfileHeader = ({
   notifications,
   showNotifications,
   setShowNotifications,
+  foundItems = 0,
+  returnedItems = 0,
 }) => (
   <View className="bg-white px-5 pt-10">
     <View className="items-center mb-6 relative">
@@ -118,6 +120,16 @@ const ProfileHeader = ({
         <Text className="text-xs text-gray-400 mt-1">
           Last edited: {lastEdited}
         </Text>
+        <View className="flex-row items-center gap-4 mt-4">
+          <View className="flex-row items-center gap-2">
+            <Image source={icons.found} className="w-6 h-6" />
+            <Text className="text-gray-500">Found: {foundItems}</Text>
+          </View>
+          <View className="flex-row items-center gap-2">
+            <Image source={icons.returned} className="w-6 h-6" />
+            <Text className="text-gray-500">Returned: {returnedItems}</Text>
+          </View>
+        </View>
       </View>
     </View>
 
@@ -152,6 +164,8 @@ const Profile = () => {
   const [username, setUsername] = useState("");
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [password, setPassword] = useState("");
+  const [foundItems, setFoundItems] = useState(0);
+  const [returnedItems, setReturnedItems] = useState(0);
 
   const styles = {
     notificationsContainer: {
@@ -254,6 +268,14 @@ const Profile = () => {
       setLoading(false);
     }
   };
+
+  // Add this useEffect to update stats when user data changes
+  useEffect(() => {
+    if (user) {
+      setFoundItems(user.foundItems || 0);
+      setReturnedItems(user.returnedItems || 0);
+    }
+  }, [user]);
 
   const handleImagePick = async () => {
     try {
