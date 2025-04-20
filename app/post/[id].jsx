@@ -35,7 +35,7 @@ const PostDetails = () => {
       setPost(postData);
 
       // Load owner details
-      const ownerData = await getUser(postData.foundBy);
+      const ownerData = await getUser(postData.userId);
       if (ownerData) {
         setOwner(ownerData);
       }
@@ -94,7 +94,7 @@ const PostDetails = () => {
       return;
     }
 
-    if (currentUser.uid === post.foundBy) {
+    if (currentUser.uid === post.userId) {
       Alert.alert("Error", "You cannot chat with yourself");
       return;
     }

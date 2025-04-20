@@ -3,19 +3,40 @@ import { collection, setDoc, doc, getDoc, updateDoc, getDocs, query, orderBy, li
 
 // Fetch a post by ID from foundItems or lostItems
 export const getPost = async (postId) => {
-  // Try foundItems first
-  let docRef = doc(FIREBASE_DB, "foundItems", postId);
-  let docSnap = await getDoc(docRef);
-  if (docSnap.exists()) {
-    return { ...docSnap.data(), id: docSnap.id, type: 'found' };
+  if (!postId) {
+    throw new Error("Post ID is required");
   }
-  // Try lostItems
-  docRef = doc(FIREBASE_DB, "lostItems", postId);
-  docSnap = await getDoc(docRef);
-  if (docSnap.exists()) {
-    return { ...docSnap.data(), id: docSnap.id, type: 'lost' };
+
+  try {
+    // Try foundItems first
+    let docRef = doc(FIREBASE_DB, "foundItems", postId);
+    let docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      return {
+        ...data,
+        id: docSnap.id,
+        type: 'found',
+        userId: data.userId // Ensure userId is always available
+      };
+    }
+    // Try lostItems
+    docRef = doc(FIREBASE_DB, "lostItems", postId);
+    docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      return {
+        ...data,
+        id: docSnap.id,
+        type: 'lost',
+        userId: data.userId // Ensure userId is always available
+      };
+    }
+    throw new Error("Post not found");
+  } catch (error) {
+    console.error('Error in getPost:', error);
+    throw error;
   }
-  throw new Error("Post not found");
 };
 
 export const createUser = async (userData , userId) => {
@@ -35,7 +56,7 @@ export const createUser = async (userData , userId) => {
 
 export const getUser = async (userId) => {
   try {
-    const userRef = doc(collection(FIREBASE_DB, "users"), userId);
+    const userRef = doc(FIREBASE_DB, "users", userId);
     const userDoc = await getDoc(userRef);
     if (userDoc.exists()) {
       return userDoc.data();
@@ -206,8 +227,19 @@ export const getNotifications = async (userId) => {
 
 export const markNotificationAsRead = async (notificationId, postId, claimedBy) => {
   try {
+    if (!notificationId || !postId || !claimedBy) {
+      throw new Error('Invalid parameters provided');
+    }
+
     const notificationRef = doc(FIREBASE_DB, 'notifications', notificationId);
     const postRef = doc(FIREBASE_DB, 'foundItems', postId);
+
+    // First check if notification exists
+    const notificationSnap = await getDoc(notificationRef);
+    if (!notificationSnap.exists()) {
+      console.warn('Notification not found:', notificationId);
+      return;
+    }
 
     // Update post status: claim directly on foundItems
     await updateDoc(postRef, {
@@ -216,18 +248,17 @@ export const markNotificationAsRead = async (notificationId, postId, claimedBy) 
       claimedAt: serverTimestamp()
     });
 
-    if (notificationId) {
-      await updateDoc(notificationRef, {
-        read: true
-      });
-    }
+    // Update notification as read
+    await updateDoc(notificationRef, {
+      read: true
+    });
   } catch (error) {
     console.error('Error marking notification as read:', error);
     throw error;
   }
 };
 
-export const addLostItem = async (itemData, userId) => {
+export const addLostItem = async (itemData) => {
   try {
     const lostItemsRef = collection(FIREBASE_DB, "lostItems");
     const newItemRef = doc(lostItemsRef);
@@ -240,7 +271,6 @@ export const addLostItem = async (itemData, userId) => {
     await setDoc(newItemRef, {
       ...itemData,
       id: itemId,
-      userId: userId, // Add userId field
       images: base64Images,
       createdAt: new Date(),
       isClaimed: false
@@ -351,7 +381,7 @@ export const updateUser = async (userId, userData) => {
 
 export const addKarma = async (userId, amount, reason) => {
   try {
-    const karmaRef = doc(collection(FIREBASE_DB, "karma"), userId);
+    const karmaRef = doc(FIREBASE_DB, "karma", userId);
     const userRef = doc(FIREBASE_DB, "users", userId);
     
     // Get user data
