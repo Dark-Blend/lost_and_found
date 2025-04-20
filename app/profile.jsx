@@ -20,6 +20,9 @@ import {
   getNotifications,
   markNotificationAsRead,
   updateUser,
+  getUserFoundItems,
+  getUserLostItems,
+  updateFoundItem,
 } from "../services/databaseService";
 import { deleteUser } from "../services/deleteUser";
 import {
@@ -31,7 +34,7 @@ import { FIREBASE_AUTH } from "../firebaseConfig";
 import * as ImagePicker from "expo-image-picker";
 import { StatusBar } from "expo-status-bar";
 import { icons } from "../constants/icons";
-import UserPosts from "../components/UserPosts";
+import UserItems from "../components/UserItems";
 
 const ProfileHeader = ({
   username,
@@ -486,7 +489,7 @@ const Profile = () => {
       </View>
 
       {/* Posts Section */}
-      {user?.role === "user" && <UserPosts userId={currentUser.uid} />}
+      {user?.role === "user" && <UserItems userId={currentUser.uid} />}
 
       {/* Footer Section */}
       <View className="px-5 py-4  flex-row gap-2">

@@ -7,7 +7,12 @@ import CategoryPicker from "./CategoryPicker";
 import Button from "./Button";
 import { addLostItem } from '../services/databaseService';
 
-const LostItemForm = ({ onSuccess, userId, userName }) => {
+const LostItemForm = ({ onSuccess, userId }) => {
+  if (!userId || userId === "") {
+    Alert.alert("Error", "You must be logged in to add items");
+    return null;
+  }
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [categories, setCategories] = useState([]);
@@ -52,8 +57,7 @@ const LostItemForm = ({ onSuccess, userId, userName }) => {
         categories,
         location,
         images,
-        userId,
-        foundBy: userId, // Store the user's ID as foundBy
+        userId: userId
       };
 
       await addLostItem(itemData);

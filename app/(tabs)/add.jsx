@@ -21,6 +21,12 @@ const Add = () => {
     router.back();
   };
 
+  if (!currentUser?.uid) {
+    Alert.alert("Error", "You must be logged in to add items");
+    router.back();
+    return null;
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-white">
       <StatusBar style="auto" />
@@ -42,14 +48,12 @@ const Add = () => {
         {itemType === 'found' ? (
           <FoundItemForm
             onSuccess={handleSuccess}
-            userId={currentUser?.uid || ""}
-            foundBy={currentUser?.username || "Anonymous"}
+            userId={currentUser.uid}
           />
         ) : (
           <LostItemForm
             onSuccess={handleSuccess}
-            userId={currentUser?.uid || ""}
-            userName={currentUser?.username || "Anonymous"}
+            userId={currentUser.uid}
           />
         )}
       </ScrollView>

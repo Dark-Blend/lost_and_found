@@ -83,7 +83,7 @@ export const addFoundItem = async (itemData) => {
     // Extract base64 data from the images
     const base64Images = itemData.images.map(image => image.base64);
 
-    // Add the item to Firestore with base64 images
+    // Add the item to Firestore with base64 images and userId
     await setDoc(newItemRef, {
       ...itemData,
       id: itemId,
@@ -216,16 +216,18 @@ export const markNotificationAsRead = async (notificationId, postId, claimedBy) 
       claimedAt: serverTimestamp()
     });
 
-    await updateDoc(notificationRef, {
-      read: true
-    });
+    if (notificationId) {
+      await updateDoc(notificationRef, {
+        read: true
+      });
+    }
   } catch (error) {
     console.error('Error marking notification as read:', error);
     throw error;
   }
 };
 
-export const addLostItem = async (itemData) => {
+export const addLostItem = async (itemData, userId) => {
   try {
     const lostItemsRef = collection(FIREBASE_DB, "lostItems");
     const newItemRef = doc(lostItemsRef);
@@ -234,10 +236,11 @@ export const addLostItem = async (itemData) => {
     // Extract base64 data from the images
     const base64Images = itemData.images.map(image => image.base64);
 
-    // Add the item to Firestore with base64 images
+    // Add the item to Firestore with base64 images and userId
     await setDoc(newItemRef, {
       ...itemData,
       id: itemId,
+      userId: userId, // Add userId field
       images: base64Images,
       createdAt: new Date(),
       isClaimed: false
@@ -455,10 +458,15 @@ export const getUserKarma = async (userId) => {
   }
 };
 
-export const getUserFoundItems = async (userId) => {
+export const getUserLostItems = async (userId) => {
   try {
-    const foundItemsRef = collection(FIREBASE_DB, "foundItems");
-    const q = query(foundItemsRef, where("foundBy", "==", userId), orderBy("createdAt", "desc"));
+    if (!userId) {
+      console.log('No user ID provided for lost items query');
+      return [];
+    }
+    
+    const lostItemsRef = collection(FIREBASE_DB, 'lostItems');
+    const q = query(lostItemsRef, where('userId', '==', userId), orderBy('createdAt', 'desc'));
     const querySnapshot = await getDocs(q);
     
     const items = [];
@@ -471,7 +479,33 @@ export const getUserFoundItems = async (userId) => {
     
     return items;
   } catch (error) {
-    console.error("Error getting user found items:", error);
+    console.error('Error getting user lost items:', error);
+    throw error;
+  }
+};
+
+export const getUserFoundItems = async (userId) => {
+  try {
+    if (!userId) {
+      console.log('No user ID provided for found items query');
+      return [];
+    }
+    
+    const foundItemsRef = collection(FIREBASE_DB, 'foundItems');
+    const q = query(foundItemsRef, where('userId', '==', userId), orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    
+    const items = [];
+    querySnapshot.forEach((doc) => {
+      items.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    return items;
+  } catch (error) {
+    console.error('Error getting user found items:', error);
     throw error;
   }
 };

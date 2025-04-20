@@ -7,7 +7,12 @@ import CategoryPicker from "./CategoryPicker";
 import Button from "./Button";
 import { addFoundItem } from '../services/databaseService';
 
-const FoundItemForm = ({ onSuccess, userId, foundBy }) => {
+const FoundItemForm = ({ onSuccess, userId }) => {
+  if (!userId || userId === "") {
+    Alert.alert("Error", "You must be logged in to add items");
+    return null;
+  }
+
   const [foundItem, setFoundItem] = useState({
     itemName: "",
     description: "",
@@ -17,7 +22,7 @@ const FoundItemForm = ({ onSuccess, userId, foundBy }) => {
       latitude: null,
       longitude: null,
     },
-    foundBy: userId, // Only foundBy is needed
+    userId: userId
   });
   const [loading, setLoading] = useState(false);
 
@@ -59,8 +64,7 @@ const FoundItemForm = ({ onSuccess, userId, foundBy }) => {
         latitude: null,
         longitude: null,
       },
-      userId: userId,
-      foundBy: userId
+      userId: userId
     });
 
     // Reset child components
@@ -75,7 +79,12 @@ const FoundItemForm = ({ onSuccess, userId, foundBy }) => {
     }
   };
 
-  const handleSubmit = async () => {
+   const handleSubmit = async () => {
+    if (!userId) {
+      Alert.alert("Error", "You must be logged in to add items");
+      return;
+    }
+
     if (!foundItem.itemName || !foundItem.description || !foundItem.location.latitude || !foundItem.location.longitude) {
       Alert.alert("Error", "Please fill in all required fields and select a location");
       return;
@@ -89,7 +98,11 @@ const FoundItemForm = ({ onSuccess, userId, foundBy }) => {
     setLoading(true);
     let itemAdded = false;
     try {
-      await addFoundItem(foundItem);
+      const itemData = {
+        ...foundItem,
+        userId: userId
+      };
+      await addFoundItem(itemData);
       itemAdded = true;
       Alert.alert("Success", "Item added successfully");
       resetForm();
