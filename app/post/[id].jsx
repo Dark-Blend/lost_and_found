@@ -95,7 +95,6 @@ const PostDetails = () => {
     }
 
     if (currentUser.uid === post.userId) {
-      Alert.alert("Error", "You cannot chat with yourself");
       return;
     }
 
@@ -159,7 +158,7 @@ const PostDetails = () => {
       </View>
 
       {/* Content */}
-      <View className="p-4">
+      <View className="p-4 h-[580px]">
         <Text className="text-3xl font-poppins-bold mb-2">{post.itemName}</Text>
         
         <View className="flex-row items-center mb-4">
@@ -219,51 +218,33 @@ const PostDetails = () => {
             </View>
           </>
         )}
-
-        {/* Action Buttons */}
-        <View>
-          {currentUser?.uid === post.foundBy ? (
-            <TouchableOpacity
-              onPress={handleDelete}
-              className="bg-red-500 px-4 py-3 rounded-lg mt-4"
-            >
-              <Text className="text-white font-poppins-semibold text-center">
-                Delete Post
-              </Text>
-            </TouchableOpacity>
-          ) : post.isClaimed ? null : (
-            <TouchableOpacity
-              onPress={async () => {
-                try {
-                  await markNotificationAsRead(null, post.id, currentUser.uid); // null for notificationId if not from notification
-                  Alert.alert('Success', 'You have claimed this item!');
-                  await loadPostDetails();
-                } catch (error) {
-                  Alert.alert('Error', 'Failed to claim item');
-                }
-              }}
-              className="bg-green-600 px-4 py-3 rounded-lg mt-4"
-            >
-              <Text className="text-white font-poppins-semibold text-center">
-                Claim Item
-              </Text>
-            </TouchableOpacity>
-          )}
-          {/* Chat button for non-owners, always available */}
-          {currentUser?.uid !== post.foundBy && (
-            <TouchableOpacity
-              onPress={handleChat}
-              className="bg-black px-4 py-3 rounded-lg mt-4"
-            >
-              <Text className="text-white font-poppins-semibold text-center">
-                Chat with Finder
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
+       
       </View>
+
+      <View className="p-4">
+         {/* Action Buttons */}
+         {currentUser?.uid === post.userId ? (
+          <TouchableOpacity
+            onPress={handleDelete}
+            className="bg-red-500 px-4 py-3 rounded-lg"
+          >
+            <Text className="text-white font-poppins-semibold text-center">
+              Delete Post
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            onPress={handleChat}
+            className="bg-black px-4 py-3 rounded-lg"
+          >
+            <Text className="text-white font-poppins-semibold text-center">
+              Chat with Finder
+            </Text>
+          </TouchableOpacity>
+        )}
+       </View>
     </ScrollView>
   );
-};
+}
 
 export default PostDetails;
