@@ -9,11 +9,11 @@ import {
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { getFoundItemById, getUser, deleteFoundItem, checkMatchingFoundItems } from '../../services/databaseService';
+import { getPost, getUser, getClaimedItemDetails, claimPost, unclaimPost } from '../../services/databaseService';
 import { StatusBar } from 'expo-status-bar';
 import { useGlobalContext } from '../../context/GlobalProvider';
 import { FIREBASE_DB } from '../../firebaseConfig';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 const PostDetails = () => {
   const { id } = useLocalSearchParams();
@@ -24,49 +24,43 @@ const PostDetails = () => {
   const { currentUser } = useGlobalContext();
   const [post, setPost] = useState(null);
   const [owner, setOwner] = useState(null);
+  const [claimedDetails, setClaimedDetails] = useState(null);
   const [claimer, setClaimer] = useState(null);
 
-  useEffect(() => {
-    const loadItem = async () => {
-      try {
-        // Try to find in foundItems first
-        let docRef = doc(FIREBASE_DB, 'foundItems', id);
-        let docSnap = await getDoc(docRef);
-        
-        // If not found in foundItems, try lostItems
-        if (!docSnap.exists()) {
-          docRef = doc(FIREBASE_DB, 'lostItems', id);
-          docSnap = await getDoc(docRef);
-        }
-        
-        if (docSnap.exists()) {
-          const itemData = { id: docSnap.id, ...docSnap.data() };
-          setItem(itemData);
-          setPost(itemData);
-
-          // Load user data for the person who found/lost the item
-          const userDoc = await getDoc(doc(FIREBASE_DB, 'users', itemData.foundBy));
-          if (userDoc.exists()) {
-            setOwner({
-              id: userDoc.id,
-              ...userDoc.data()
-            });
-          }
-        } else {
-          Alert.alert('Error', 'Item not found');
-          router.back();
-        }
-      } catch (error) {
-        console.error('Error loading item:', error);
-        Alert.alert('Error', 'Failed to load item');
+  const loadPostDetails = async () => {
+    try {
+      const postData = await getPost(id);
+      if (!postData) {
+        Alert.alert("Error", "Post not found");
         router.back();
-      } finally {
-        setLoading(false);
+        return;
       }
-    };
+      setPost(postData);
 
+      // Load owner details
+      const ownerData = await getUser(postData.foundBy);
+      if (ownerData) {
+        setOwner(ownerData);
+      }
+
+      // Load claimed item details if post is claimed
+      if (postData.isClaimed) {
+        const claimedData = await getClaimedItemDetails(id);
+        if (claimedData) {
+          setClaimedDetails(claimedData);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading post details:", error);
+      Alert.alert("Error", "Failed to load post details");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     if (id) {
-      loadItem();
+      loadPostDetails();
     }
   }, [id]);
 
@@ -97,7 +91,7 @@ const PostDetails = () => {
     );
   };
 
-  const handleChat = () => {
+  const handleChat = async () => {
     if (!post || !owner) {
       Alert.alert("Error", "Could not start chat at this time");
       return;
@@ -108,8 +102,29 @@ const PostDetails = () => {
       return;
     }
 
-    // Navigate to chat screen with the finder's ID
-    router.push(`/chat/${post.foundBy}`);
+    try {
+      // Create chat ID by combining and sorting both user IDs
+      const chatId = [currentUser.uid, post.foundBy].sort().join('_');
+      
+      // Create or get the chat document
+      const chatDocRef = doc(FIREBASE_DB, 'chats', chatId);
+      const chatDoc = await getDoc(chatDocRef);
+      
+      if (!chatDoc.exists()) {
+        // Create the chat document if it doesn't exist
+        await setDoc(chatDocRef, {
+          participants: [currentUser.uid, post.foundBy],
+          createdAt: serverTimestamp(),
+          lastMessage: '',
+          lastMessageTime: serverTimestamp()
+        });
+      }
+      
+      router.push(`/chat/${chatId}`);
+    } catch (error) {
+      console.error('Error creating chat:', error);
+      Alert.alert("Error", "Failed to create chat");
+    }
   };
 
   const handleContact = () => {
@@ -155,11 +170,16 @@ const PostDetails = () => {
         
         <View className="flex-row items-center mb-4">
           <View className={`px-3 py-1 rounded ${
-            post.status === 'claimed' ? 'bg-green-500' : 'bg-yellow-500'
+            post.isClaimed ? 'bg-green-500' : 'bg-yellow-500'
           }`}>
             <Text className="text-white font-poppins capitalize">
-              {post.status}
+              {post.isClaimed ? 'Claimed' : 'Available'}
             </Text>
+            {post.isClaimed && claimedDetails && (
+              <Text className="text-xs text-white font-poppins-light">
+                {new Date(claimedDetails.claimedAt.toDate()).toLocaleString()}
+              </Text>
+            )}
           </View>
           <Text className="text-gray-500 font-poppins-light ml-2">
             {new Date(post.createdAt.toDate()).toLocaleString()}

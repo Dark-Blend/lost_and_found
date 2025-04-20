@@ -9,7 +9,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from "react-native";
+import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useGlobalContext } from "../../context/GlobalProvider";
 import {
@@ -90,6 +92,24 @@ const ChatScreen = () => {
     });
   };
 
+  const handleImagePick = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.5,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const imageBase64 = result.assets[0].base64;
+        await sendMessage(currentUser.uid, otherUserId, '', imageBase64);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to send image');
+    }
+  };
+
   const handleSend = async () => {
     if (!message.trim()) return;
 
@@ -98,6 +118,7 @@ const ChatScreen = () => {
       setMessage("");
     } catch (error) {
       console.error("Error sending message:", error);
+      Alert.alert('Error', 'Failed to send message');
     }
   };
 
@@ -147,6 +168,12 @@ const ChatScreen = () => {
           scrollViewRef.current?.scrollToEnd({ animated: true })
         }
       >
+        <View className="mb-4 bg-white p-4 rounded-lg shadow-sm">
+        
+          <Text className="text-gray-500 font-poppins-light text-center text-xs leading-4">
+            This chat is intended solely for discussing lost item details and arranging safe returns. For your security, avoid sharing personal information and always meet in public places. Report any suspicious behavior.
+          </Text>
+        </View>
         {messages.map((msg) => (
           <View
             key={msg.id}
@@ -161,13 +188,21 @@ const ChatScreen = () => {
                   : "bg-white rounded-tl-none"
               }`}
             >
-              <Text
-                className={`font-poppins ${
-                  msg.senderId === currentUser.uid ? "text-white" : "text-black"
-                }`}
-              >
-                {msg.text}
-              </Text>
+              {msg.imageUrl ? (
+                <Image
+                  source={{ uri: `data:image/jpeg;base64,${msg.imageUrl}` }}
+                  className="w-48 h-48 rounded"
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text
+                  className={`font-poppins ${
+                    msg.senderId === currentUser.uid ? "text-white" : "text-black"
+                  }`}
+                >
+                  {msg.text}
+                </Text>
+              )}
             </View>
             <Text className="text-xs text-gray-500 mt-1 font-poppins">
               {msg.createdAt.toLocaleTimeString([], {
@@ -182,13 +217,20 @@ const ChatScreen = () => {
       {/* Message Input */}
       <View className="p-4 bg-white border-t border-gray-200">
         <View className="flex-row items-center">
+          <TouchableOpacity
+            onPress={handleImagePick}
+            className="p-2 mr-2 bg-gray-100 rounded-full h-16 w-16 flex items-center justify-center"
+          >
+            <Text className="font-poppins text-lg">📷</Text>
+          </TouchableOpacity>
           <View className="flex-1 bg-gray-100 rounded-full px-4 py-2 mr-2">
             <TextInput
               value={message}
               onChangeText={setMessage}
               placeholder="Type a message..."
               className="font-poppins"
-              multiline
+              onSubmitEditing={handleSend}
+              blurOnSubmit={false}
               maxLength={500}
             />
           </View>

@@ -165,9 +165,50 @@ export const getNotifications = async (userId) => {
   }
 };
 
-export const markNotificationAsRead = async (notificationId) => {
+export const getClaimedItemDetails = async (postId) => {
+  try {
+    const claimedItemRef = doc(FIREBASE_DB, 'claimedItems', postId);
+    const claimedItemDoc = await getDoc(claimedItemRef);
+
+    if (!claimedItemDoc.exists()) {
+      return null;
+    }
+
+    return {
+      id: claimedItemDoc.id,
+      ...claimedItemDoc.data()
+    };
+  } catch (error) {
+    console.error('Error getting claimed item details:', error);
+    throw error;
+  }
+};
+
+export const markNotificationAsRead = async (notificationId, postId, claimedBy) => {
   try {
     const notificationRef = doc(FIREBASE_DB, 'notifications', notificationId);
+    const postRef = doc(FIREBASE_DB, 'foundItems', postId);
+
+    // Update post status
+    await updateDoc(postRef, {
+      isClaimed: true
+    });
+
+    // Add to claimed items collection
+    const claimedItemData = {
+      postId,
+      itemName: (await getDoc(postRef)).data().itemName,
+      description: (await getDoc(postRef)).data().description,
+      categories: (await getDoc(postRef)).data().categories,
+      images: (await getDoc(postRef)).data().images,
+      foundBy: (await getDoc(postRef)).data().foundBy,
+      claimedBy,
+      claimedAt: serverTimestamp(),
+      location: (await getDoc(postRef)).data().location
+    };
+
+    await setDoc(doc(FIREBASE_DB, 'claimedItems', postId), claimedItemData);
+
     await updateDoc(notificationRef, {
       read: true
     });
@@ -436,6 +477,27 @@ export const updateFoundItem = async (itemId, itemData) => {
       updatedAt: new Date(),
       isClaimed: !!itemData.claimedBy // Ensure isClaimed is updated based on claimedBy
     });
+
+    if (itemData.claimedBy) {
+      // Add to claimed items collection
+      const claimedItemData = {
+        postId: itemId,
+        itemName: itemData.itemName,
+        description: itemData.description,
+        categories: itemData.categories,
+        images: itemData.images,
+        foundBy: itemData.foundBy,
+        claimedBy: itemData.claimedBy,
+        claimedAt: serverTimestamp(),
+        location: itemData.location
+      };
+
+      await setDoc(doc(FIREBASE_DB, 'claimedItems', itemId), claimedItemData);
+    } else {
+      // Remove from claimed items collection
+      await deleteDoc(doc(FIREBASE_DB, 'claimedItems', itemId));
+    }
+
     return true;
   } catch (error) {
     console.error("Error updating found item:", error);
@@ -520,10 +582,13 @@ export const getAllFoundItems = async () => {
 };
 
 // Chat functions
-export const sendMessage = async (senderId, receiverId, message) => {
+export const sendMessage = async (senderId, receiverId, message, imageBase64 = null) => {
   try {
     const chatId = [senderId, receiverId].sort().join('_');
     
+    // Create last message preview
+    const lastMessagePreview = imageBase64 ? '📷 Image' : message;
+
     // First, ensure the chat document exists
     const chatDocRef = doc(FIREBASE_DB, 'chats', chatId);
     const chatDoc = await getDoc(chatDocRef);
@@ -533,13 +598,13 @@ export const sendMessage = async (senderId, receiverId, message) => {
       await setDoc(chatDocRef, {
         participants: [senderId, receiverId],
         createdAt: serverTimestamp(),
-        lastMessage: message,
+        lastMessage: lastMessagePreview,
         lastMessageTime: serverTimestamp()
       });
     } else {
       // Update the last message
       await updateDoc(chatDocRef, {
-        lastMessage: message,
+        lastMessage: lastMessagePreview,
         lastMessageTime: serverTimestamp()
       });
     }
@@ -549,6 +614,7 @@ export const sendMessage = async (senderId, receiverId, message) => {
       senderId,
       text: message,
       createdAt: serverTimestamp(),
+      ...(imageBase64 && { imageUrl: imageBase64 })
     };
 
     await addDoc(collection(FIREBASE_DB, `chats/${chatId}/messages`), messageData);
