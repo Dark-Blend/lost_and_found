@@ -66,8 +66,13 @@ const LostItemForm = ({ onSuccess, userId }) => {
       resetForm();
       onSuccess();
     } catch (error) {
-      console.error('Error adding item:', error);
-      Alert.alert('Error', 'Failed to add item');
+      // Check if error is a timeout error
+      if (error.message && error.message.includes('timed out until')) {
+        Alert.alert("Timeout", error.message);
+      } else {
+        console.error('Error adding item:', error);
+        Alert.alert('Error', 'Failed to add item');
+      }
     } finally {
       setLoading(false);
     }

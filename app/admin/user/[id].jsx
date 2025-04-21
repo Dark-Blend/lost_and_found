@@ -178,6 +178,11 @@ const UserDetails = () => {
         <Image source={{ uri: user.avatar }} className="w-32 h-32 mx-auto rounded-full my-6" />
         
         <View className="bg-gray-100 p-4 rounded-lg mb-4">
+          <Text className="text-lg font-poppins-medium">Username</Text>
+          <Text className="text-gray-600 font-poppins">{user.username}</Text>
+        </View>
+
+        <View className="bg-gray-100 p-4 rounded-lg mb-4">
           <Text className="text-lg font-poppins-medium">Email</Text>
           <Text className="text-gray-600 font-poppins">{user.email}</Text>
         </View>

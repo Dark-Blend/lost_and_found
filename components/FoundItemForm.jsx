@@ -112,7 +112,10 @@ const FoundItemForm = ({ onSuccess, userId }) => {
         onSuccess();
       }, 200);
     } catch (error) {
-      if (!itemAdded) {
+      // Check if error is a timeout error
+      if (error.message && error.message.includes('timed out until')) {
+        Alert.alert("Timeout", error.message);
+      } else if (!itemAdded) {
         Alert.alert("Error", "Failed to add item");
       } else {
         // If item was added but something else failed (e.g. notification), show a warning

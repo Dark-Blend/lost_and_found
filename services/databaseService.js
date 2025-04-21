@@ -97,6 +97,17 @@ const convertImageToBase64 = async (uri) => {
 
 export const addFoundItem = async (itemData) => {
   try {
+    // Check if user is timed out
+    const userRef = doc(FIREBASE_DB, "users", itemData.userId);
+    const userDoc = await getDoc(userRef);
+    const userData = userDoc.data();
+
+    // Check if user is currently timed out
+    if (userData.timeoutUntil && userData.timeoutUntil.toDate() > new Date()) {
+      const timeoutDate = userData.timeoutUntil.toDate();
+      throw new Error(`User is timed out until ${timeoutDate.toLocaleDateString()}`);
+    }
+
     const foundItemsRef = collection(FIREBASE_DB, 'foundItems');
     const newItemRef = doc(foundItemsRef);
     const itemId = newItemRef.id;
@@ -104,7 +115,6 @@ export const addFoundItem = async (itemData) => {
     // Extract base64 data from the images
     const base64Images = itemData.images.map(image => image.base64);
 
-    // Add the item to Firestore with base64 images and userId
     // Add the item to Firestore with base64 images and userId
     await setDoc(newItemRef, {
       ...itemData,
@@ -163,7 +173,6 @@ export const addFoundItem = async (itemData) => {
     
     return itemId;
   } catch (error) {
-    console.error('Error adding found item:', error);
     throw error;
   }
 };
@@ -245,6 +254,17 @@ export const markNotificationAsRead = async (notificationId, postId, claimedBy) 
 
 export const addLostItem = async (itemData) => {
   try {
+    // Check if user is timed out
+    const userRef = doc(FIREBASE_DB, "users", itemData.userId);
+    const userDoc = await getDoc(userRef);
+    const userData = userDoc.data();
+
+    // Check if user is currently timed out
+    if (userData.timeoutUntil && userData.timeoutUntil.toDate() > new Date()) {
+      const timeoutDate = userData.timeoutUntil.toDate();
+      throw new Error(`User is timed out until ${timeoutDate.toLocaleDateString()}`);
+    }
+
     const lostItemsRef = collection(FIREBASE_DB, "lostItems");
     const newItemRef = doc(lostItemsRef);
     const itemId = newItemRef.id;
@@ -264,7 +284,6 @@ export const addLostItem = async (itemData) => {
     
     return itemId;
   } catch (error) {
-    console.error("Error adding lost item:", error);
     throw error;
   }
 };
