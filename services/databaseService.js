@@ -765,6 +765,31 @@ export const getAllFoundItems = async () => {
   }
 };
 
+export const getClaimedItems = async () => {
+  try {
+    const foundItemsRef = collection(FIREBASE_DB, 'foundItems');
+    const q = query(
+      foundItemsRef, 
+      where('isClaimed', '==', true),
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    
+    const claimedItems = [];
+    querySnapshot.forEach((doc) => {
+      claimedItems.push({
+        ...doc.data(),
+        id: doc.id
+      });
+    });
+    
+    return claimedItems;
+  } catch (error) {
+    console.error('Error fetching claimed items:', error);
+    throw error;
+  }
+};
+
 // Chat functions
 export const sendMessage = async (senderId, receiverId, message, imageBase64 = null) => {
   try {
