@@ -58,10 +58,10 @@ const Users = () => {
     <View className="flex-1 py-4">
       <StatusBar hidden />
       <View className="px-4 mb-4">
-        <View className="flex-row items-center bg-gray-100 rounded-lg px-3 py-2">
+        <View className="flex-row items-center bg-gray-100 rounded-lg px-3 py-2 border border-gray-300">
           <Ionicons name="search" size={20} color="gray" className="mr-2" />
           <TextInput 
-            placeholder="Search users (min 3 chars)"
+            placeholder="Search users "
             value={searchQuery}
             onChangeText={handleSearch}
             className="flex-1 ml-2 font-poppins-regular"
