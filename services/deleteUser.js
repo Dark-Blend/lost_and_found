@@ -10,10 +10,6 @@ export const deleteUser = async (userId) => {
       { name: 'foundItems', field: 'userId' },
       { name: 'lostItems', field: 'userId' },
       { name: 'chats', field: 'participants', operator: 'array-contains' },
-      { name: 'comments', field: 'userId' },
-      { name: 'likes', field: 'userId' },
-      { name: 'reports', field: 'userId' },
-      { name: 'bookmarks', field: 'userId' },
     ];
 
     // Delete documents from each collection

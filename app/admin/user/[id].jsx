@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert, ScrollView, Image } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { doc, getDoc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { FIREBASE_DB } from '../../../firebaseConfig';
 import { FIREBASE_AUTH } from '../../../firebaseConfig';
-import { deleteUser } from 'firebase/auth';
 import { StatusBar } from 'expo-status-bar';
+import { deleteUser } from '../../../services/deleteUser';
 
 const UserDetails = () => {
   const { id } = useLocalSearchParams();
@@ -112,43 +112,27 @@ const UserDetails = () => {
 
   const handleDelete = async () => {
     if (user.role === 'admin') {
-      Alert.alert('Error', 'Cannot delete an admin user');
+      Alert.alert('Error', 'Cannot ban an admin user');
       return;
     }
-
     Alert.alert(
-      'Delete User',
-      'Are you sure you want to permanently delete this user? This action cannot be undone.',
+      'Ban User',
+      'Are you sure you want to ban this user and delete all their data? This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
+        { text: 'Ban', style: 'destructive', onPress: async () => {
+            setUpdating(true);
             try {
-              setUpdating(true);
-              // Delete from Firestore
-              await deleteDoc(doc(FIREBASE_DB, 'users', id));
-              
-              // Delete from Firebase Auth
-              try {
-                const currentAuthUser = FIREBASE_AUTH.currentUser;
-                if (currentAuthUser) {
-                  await deleteUser(currentAuthUser);
-                }
-              } catch (authError) {
-                console.error('Error deleting user from auth:', authError);
-              }
-
-              Alert.alert('Success', 'User has been permanently deleted');
-              router.back();
+              await deleteUser(id);
+              Alert.alert('Success', 'User banned successfully');
+              router.push('/admin/(tabs)/users');
             } catch (error) {
-              console.error('Error deleting user:', error);
-              Alert.alert('Error', 'Failed to delete user');
+              console.error('Error banning user:', error);
+              Alert.alert('Error', error.message || 'Failed to ban user');
+            } finally {
               setUpdating(false);
             }
-          }
-        }
+        }}
       ]
     );
   };
@@ -231,7 +215,7 @@ const UserDetails = () => {
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
                 <Text className="text-white font-poppins-medium text-center">
-                  Delete User Permanently
+                  Ban User Permanently
                 </Text>
               )}
             </TouchableOpacity>
@@ -242,4 +226,4 @@ const UserDetails = () => {
   );
 };
 
-export default UserDetails; 
+export default UserDetails;

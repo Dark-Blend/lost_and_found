@@ -933,3 +933,32 @@ export const scheduleTimeoutCleanup = () => {
   // For now, it's a manual method that can be called periodically
   return clearExpiredTimeouts();
 };
+
+// Function to ban user and delete associated data from Firestore
+export const banUser = async (userId) => {
+  try {
+    const userRef = doc(FIREBASE_DB, 'users', userId);
+    const userDoc = await getDoc(userRef);
+    if (!userDoc.exists()) throw new Error('User not found');
+    const data = userDoc.data();
+    if (data.role === 'admin') throw new Error('Cannot ban an admin user');
+
+    const batch = writeBatch(FIREBASE_DB);
+    // Delete lost items
+    const lostSnap = await getDocs(query(collection(FIREBASE_DB, 'lostItems'), where('userId','==',userId)));
+    lostSnap.forEach(s => batch.delete(doc(FIREBASE_DB, 'lostItems', s.id)));
+    // Delete found items
+    const foundSnap = await getDocs(query(collection(FIREBASE_DB, 'foundItems'), where('userId','==',userId)));
+    foundSnap.forEach(s => batch.delete(doc(FIREBASE_DB, 'foundItems', s.id)));
+    // Delete notifications
+    const notifSnap = await getDocs(query(collection(FIREBASE_DB, 'notifications'), where('userId','==',userId)));
+    notifSnap.forEach(s => batch.delete(doc(FIREBASE_DB, 'notifications', s.id)));
+    // Delete user document
+    batch.delete(userRef);
+    await batch.commit();
+    return { success: true, message: 'User banned successfully' };
+  } catch (error) {
+    console.error('Error banning user:', error);
+    throw error;
+  }
+};
