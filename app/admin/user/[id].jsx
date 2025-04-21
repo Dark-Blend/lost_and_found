@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Alert, ScrollView, Image } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, getDoc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { FIREBASE_DB } from '../../../firebaseConfig';
@@ -173,7 +173,9 @@ const UserDetails = () => {
     <View className="flex-1 bg-white py-4">
       <StatusBar hidden />
       <ScrollView className="flex-1 p-4">
-        <Text className="text-3xl font-poppins-bold mb-4">User Details</Text>
+        <Text className="text-3xl font-poppins-bold my-5">User Details</Text>
+
+        <Image source={{ uri: user.avatar }} className="w-32 h-32 mx-auto rounded-full my-6" />
         
         <View className="bg-gray-100 p-4 rounded-lg mb-4">
           <Text className="text-lg font-poppins-medium">Email</Text>

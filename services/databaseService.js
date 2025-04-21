@@ -632,21 +632,26 @@ export const updateUserStats = async (userId, statType, amount) => {
   }
 };
 
-export const getAllUsersExceptCurrent = async (currentUserId) => {
+export const getAllUsers = async (searchQuery = '') => {
   try {
     const usersRef = collection(FIREBASE_DB, "users");
-    const querySnapshot = await getDocs(usersRef);
+    let q = query(
+      usersRef, 
+      where('role', '!=', 'admin')
+    );
+    
+    const querySnapshot = await getDocs(q);
     const users = [];
+    
     querySnapshot.forEach((doc) => {
-      const userData = {
-        id: doc.id,
-        ...doc.data()
-      };
-      // Only add users who are not the current user
-      if (userData.id !== currentUserId) {
+      const userData = { id: doc.id, ...doc.data() };
+      
+      // If searchQuery is provided, filter users
+      if (!searchQuery || searchFilterMatch(userData, searchQuery)) {
         users.push(userData);
       }
     });
+    
     return users;
   } catch (error) {
     console.error("Error loading users:", error);
@@ -654,57 +659,17 @@ export const getAllUsersExceptCurrent = async (currentUserId) => {
   }
 };
 
-export const createChat = async (userId1, userId2, postId) => {
-  try {
-    if (!userId1 || !userId2 || !postId) {
-      throw new Error('Invalid parameters provided');
-    }
-
-    // Sort user IDs to create consistent chat ID
-    const sortedIds = [userId1, userId2].sort();
-    const chatId = `${sortedIds[0]}_${sortedIds[1]}`;
-
-    const chatRef = doc(FIREBASE_DB, 'chats', chatId);
-    const chatSnap = await getDoc(chatRef);
-
-    if (chatSnap.exists()) {
-      // Chat already exists, just return the ID
-      return chatId;
-    }
-
-    // Create new chat
-    await setDoc(chatRef, {
-      userId1,
-      userId2,
-      postId,
-      createdAt: serverTimestamp(),
-      lastMessage: null,
-      lastMessageTimestamp: null
-    });
-
-    return chatId;
-  } catch (error) {
-    console.error('Error creating chat:', error);
-    throw error;
-  }
-};
-
-export const getAllUsers = async () => {
-  try {
-    const usersRef = collection(FIREBASE_DB, "users");
-    const querySnapshot = await getDocs(usersRef);
-    const users = [];
-    querySnapshot.forEach((doc) => {
-      users.push({
-        id: doc.id,
-        ...doc.data()
-      });
-    });
-    return users;
-  } catch (error) {
-    console.error("Error loading users:", error);
-    throw error;
-  }
+// Helper function to perform search across multiple fields
+const searchFilterMatch = (user, searchQuery) => {
+  const lowercaseQuery = searchQuery.toLowerCase();
+  
+  return (
+    // Search across multiple fields
+    (user.name && user.name.toLowerCase().includes(lowercaseQuery)) ||
+    (user.email && user.email.toLowerCase().includes(lowercaseQuery)) ||
+    (user.phoneNumber && user.phoneNumber.includes(lowercaseQuery)) ||
+    (user.id && user.id.toLowerCase().includes(lowercaseQuery))
+  );
 };
 
 export const getFoundItemById = async (itemId) => {

@@ -1,24 +1,22 @@
-import { View, Text } from 'react-native'
-import React, { useEffect, useState } from 'react'
+import { View, Text, TextInput } from 'react-native'
+import React, { useEffect, useState, useCallback } from 'react'
 import { StatusBar } from 'expo-status-bar'
-import { collection, getDocs } from 'firebase/firestore'
-import { FIREBASE_DB } from '../../../firebaseConfig'
 import { TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native'
 import { useRouter } from 'expo-router'
+import { getAllUsers } from '../../../services/databaseService'
+import { Ionicons } from '@expo/vector-icons'
+import { debounce } from 'lodash'
 
 const Users = () => {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
   const router = useRouter()
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (query = '') => {
     try {
-      const usersCollection = collection(FIREBASE_DB, 'users')
-      const usersSnapshot = await getDocs(usersCollection)
-      const usersList = usersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }))
+      setLoading(true)
+      const usersList = await getAllUsers(query)
       setUsers(usersList)
       setLoading(false)
     } catch (error) {
@@ -27,9 +25,26 @@ const Users = () => {
     }
   }
 
+  // Debounced search to reduce unnecessary API calls
+  const debouncedFetchUsers = useCallback(
+    debounce((query) => {
+      fetchUsers(query)
+    }, 500),
+    []
+  )
+
   useEffect(() => {
     fetchUsers()
   }, [])
+
+  const handleSearch = (query) => {
+    setSearchQuery(query)
+    if (query.length > 2) {
+      debouncedFetchUsers(query)
+    } else if (query.length === 0) {
+      fetchUsers()
+    }
+  }
 
   if (loading) {
     return (
@@ -42,26 +57,57 @@ const Users = () => {
   return (
     <View className="flex-1 py-4">
       <StatusBar hidden />
+      <View className="px-4 mb-4">
+        <View className="flex-row items-center bg-gray-100 rounded-lg px-3 py-2">
+          <Ionicons name="search" size={20} color="gray" className="mr-2" />
+          <TextInput 
+            placeholder="Search users (min 3 chars)"
+            value={searchQuery}
+            onChangeText={handleSearch}
+            className="flex-1 ml-2 font-poppins-regular"
+          />
+          {searchQuery ? (
+            <TouchableOpacity onPress={() => handleSearch('')}>
+              <Ionicons name="close-circle" size={20} color="gray" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      </View>
       <ScrollView className="flex-1 px-4">
-        {users.map(user => (
-          <TouchableOpacity 
-            key={user.id} 
-            className="bg-[#0000001a] p-4 rounded-lg mb-3"
-            onPress={() => router.push(`/admin/user/${user.id}`)}
-          >
-            <View className="flex-row justify-between items-center">
-              <View>
-                <Text className="font-poppins-medium text-lg">{user.email}</Text>
-                <Text className="font-poppins-regular text-gray-600">
-                  {user.role || 'user'}
-                </Text>
+        {users.length === 0 ? (
+          <View className="items-center justify-center">
+            <Text className="text-gray-500 font-poppins-regular">
+              {searchQuery 
+                ? 'No users found matching your search' 
+                : 'No users available'}
+            </Text>
+          </View>
+        ) : (
+          users.map(user => (
+            <TouchableOpacity 
+              key={user.id} 
+              className="bg-[#0000001a] p-4 rounded-lg mb-3"
+              onPress={() => router.push(`/admin/user/${user.id}`)}
+            >
+              <View className="flex-row justify-between items-center">
+                <View>
+                  <Text className="font-poppins-medium text-lg">
+                    {user.username}
+                  </Text>
+                  <Text className="font-poppins-regular text-gray-600">
+                    {user.email}
+                  </Text>
+                  <Text className="font-poppins-regular text-gray-600">
+                    Role: {user.role || 'user'}
+                  </Text>
+                </View>
               </View>
-            </View>
-          </TouchableOpacity>
-        ))}
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
     </View>
   )
 }
 
-export default Users 
+export default Users
