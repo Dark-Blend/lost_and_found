@@ -1,5 +1,5 @@
 import { FIREBASE_DB } from "../firebaseConfig";
-import { collection, setDoc, doc, getDoc, updateDoc, getDocs, query, orderBy, limit, where, deleteDoc, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, setDoc, doc, getDoc, updateDoc, getDocs, query, orderBy, limit, where, deleteDoc, addDoc, serverTimestamp, writeBatch, deleteField, Timestamp } from "firebase/firestore";
 
 // Fetch a post by ID from foundItems or lostItems
 export const getPost = async (postId) => {
@@ -888,4 +888,48 @@ export const getUserChats = async (userId) => {
     console.error('Error getting user chats:', error);
     throw error;
   }
+};
+
+// Function to clear expired timeouts
+export const clearExpiredTimeouts = async () => {
+  try {
+    const usersRef = collection(FIREBASE_DB, "users");
+    const now = new Date();
+
+    // Query for users with active timeouts that have expired
+    const q = query(
+      usersRef, 
+      where('timeoutUntil', '!=', null),
+      where('timeoutUntil', '<=', Timestamp.fromDate(now))
+    );
+
+    const querySnapshot = await getDocs(q);
+
+    // Batch update to remove timeout status
+    const batch = writeBatch(FIREBASE_DB);
+
+    querySnapshot.forEach((doc) => {
+      const userRef = doc.ref;
+      batch.update(userRef, {
+        timeoutUntil: deleteField(),
+        status: deleteField()
+      });
+    });
+
+    // Commit the batch
+    await batch.commit();
+
+    console.log(`Cleared timeouts for ${querySnapshot.size} users`);
+    return querySnapshot.size;
+  } catch (error) {
+    console.error("Error clearing expired timeouts:", error);
+    throw error;
+  }
+};
+
+// Optional: Add a function to periodically check and clear timeouts
+export const scheduleTimeoutCleanup = () => {
+  // This could be set up as a cloud function or scheduled task
+  // For now, it's a manual method that can be called periodically
+  return clearExpiredTimeouts();
 };
