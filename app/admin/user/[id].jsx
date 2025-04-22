@@ -1,11 +1,20 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Alert, ScrollView, Image } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
-import { FIREBASE_DB } from '../../../firebaseConfig';
-import { FIREBASE_AUTH } from '../../../firebaseConfig';
-import { StatusBar } from 'expo-status-bar';
-import { deleteUser } from '../../../services/deleteUser';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  Image,
+} from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { doc, getDoc, updateDoc, Timestamp } from "firebase/firestore";
+import { FIREBASE_DB } from "../../../firebaseConfig";
+import { FIREBASE_AUTH } from "../../../firebaseConfig";
+import { StatusBar } from "expo-status-bar";
+import { deleteUser } from "../../../services/deleteUser";
+import { banUser, unbanUser } from "../../../services/databaseService";
 
 const UserDetails = () => {
   const { id } = useLocalSearchParams();
@@ -16,37 +25,37 @@ const UserDetails = () => {
 
   const formatDate = (timestamp) => {
     try {
-      if (!timestamp) return 'No date';
-      
+      if (!timestamp) return "No date";
+
       // Handle Firestore Timestamp
       if (timestamp instanceof Timestamp) {
         return timestamp.toDate().toLocaleDateString();
       }
-      
+
       // Handle JavaScript Date object
       if (timestamp instanceof Date) {
         return timestamp.toLocaleDateString();
       }
-      
+
       // Handle seconds timestamp
-      if (typeof timestamp === 'number') {
+      if (typeof timestamp === "number") {
         return new Date(timestamp * 1000).toLocaleDateString();
       }
-      
+
       // Handle string dates
-      if (typeof timestamp === 'string') {
+      if (typeof timestamp === "string") {
         return new Date(timestamp).toLocaleDateString();
       }
-      
+
       // Handle timestamp with nanoseconds format
       if (timestamp?.seconds) {
         return new Date(timestamp.seconds * 1000).toLocaleDateString();
       }
 
-      return 'Invalid date';
+      return "Invalid date";
     } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Error formatting date';
+      console.error("Error formatting date:", error);
+      return "Error formatting date";
     }
   };
 
@@ -56,85 +65,112 @@ const UserDetails = () => {
 
   const fetchUserDetails = async () => {
     try {
-      const userDoc = await getDoc(doc(FIREBASE_DB, 'users', id));
+      const userDoc = await getDoc(doc(FIREBASE_DB, "users", id));
       if (userDoc.exists()) {
         setUser({ id: userDoc.id, ...userDoc.data() });
       }
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching user details:', error);
+      console.error("Error fetching user details:", error);
       setLoading(false);
     }
   };
 
   const handleTimeout = async () => {
-    if (user.role === 'admin') {
-      Alert.alert('Error', 'Cannot timeout an admin user');
+    if (user.role === "admin") {
+      Alert.alert("Error", "Cannot timeout an admin user");
       return;
     }
 
     Alert.alert(
-      'Timeout User',
-      'Are you sure you want to timeout this user for 30 days?',
+      "Timeout User",
+      "Are you sure you want to timeout this user for 30 days?",
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Timeout',
-          style: 'destructive',
+          text: "Timeout",
+          style: "destructive",
           onPress: async () => {
             try {
               setUpdating(true);
               const timeoutDate = new Date();
               timeoutDate.setDate(timeoutDate.getDate() + 30);
 
-              await updateDoc(doc(FIREBASE_DB, 'users', id), {
+              await updateDoc(doc(FIREBASE_DB, "users", id), {
                 timeoutUntil: Timestamp.fromDate(timeoutDate),
-                status: 'timeout'
+                status: "timeout",
               });
 
               setUser({
                 ...user,
                 timeoutUntil: Timestamp.fromDate(timeoutDate),
-                status: 'timeout'
+                status: "timeout",
               });
-              Alert.alert('Success', 'User has been timed out for 30 days');
+              Alert.alert("Success", "User has been timed out for 30 days");
             } catch (error) {
-              console.error('Error timing out user:', error);
-              Alert.alert('Error', 'Failed to timeout user');
+              console.error("Error timing out user:", error);
+              Alert.alert("Error", "Failed to timeout user");
             } finally {
               setUpdating(false);
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
 
-  const handleDelete = async () => {
-    if (user.role === 'admin') {
-      Alert.alert('Error', 'Cannot ban an admin user');
+  const handleBan = async () => {
+    if (user.role === "admin") {
+      Alert.alert("Error", "Cannot ban an admin user");
       return;
     }
     Alert.alert(
-      'Ban User',
-      'Are you sure you want to ban this user and delete all their data? This action cannot be undone.',
+      "Ban User",
+      "Are you sure you want to ban this user? They will not be able to log in until unbanned.",
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Ban', style: 'destructive', onPress: async () => {
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Ban",
+          style: "destructive",
+          onPress: async () => {
             setUpdating(true);
             try {
-              await deleteUser(id);
-              Alert.alert('Success', 'User banned successfully');
-              router.push('/admin/(tabs)/users');
+              await banUser(id);
+              setUser({ ...user, banned: true });
+              Alert.alert("Success", "User has been banned.");
             } catch (error) {
-              console.error('Error banning user:', error);
-              Alert.alert('Error', error.message || 'Failed to ban user');
+              console.error("Error banning user:", error);
+              Alert.alert("Error", error.message || "Failed to ban user");
             } finally {
               setUpdating(false);
             }
-        }}
+          },
+        },
       ]
     );
+  };
+
+  const handleUnban = async () => {
+    Alert.alert("Unban User", "Are you sure you want to unban this user?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Unban",
+        style: "default",
+        onPress: async () => {
+          setUpdating(true);
+          try {
+            await unbanUser(id);
+            setUser({ ...user, banned: false });
+            Alert.alert("Success", "User has been unbanned.");
+          } catch (error) {
+            console.error("Error unbanning user:", error);
+            Alert.alert("Error", error.message || "Failed to unban user");
+          } finally {
+            setUpdating(false);
+          }
+        },
+      },
+    ]);
   };
 
   if (loading) {
@@ -159,8 +195,11 @@ const UserDetails = () => {
       <ScrollView className="flex-1 p-4">
         <Text className="text-3xl font-poppins-bold my-5">User Details</Text>
 
-        <Image source={{ uri: user.avatar }} className="w-32 h-32 mx-auto rounded-full my-6" />
-        
+        <Image
+          source={{ uri: user.avatar }}
+          className="w-32 h-32 mx-auto rounded-full my-6"
+        />
+
         <View className="bg-gray-100 p-4 rounded-lg mb-4">
           <Text className="text-lg font-poppins-medium">Username</Text>
           <Text className="text-gray-600 font-poppins">{user.username}</Text>
@@ -173,7 +212,9 @@ const UserDetails = () => {
 
         <View className="bg-gray-100 p-4 rounded-lg mb-4">
           <Text className="text-lg font-poppins-medium">Role</Text>
-          <Text className="text-gray-600 font-poppins capitalize">{user.role || 'user'}</Text>
+          <Text className="text-gray-600 font-poppins capitalize">
+            {user.role || "user"}
+          </Text>
         </View>
 
         {user.timeoutUntil && (
@@ -187,15 +228,19 @@ const UserDetails = () => {
 
         <View className="bg-gray-100 p-4 rounded-lg mb-4">
           <Text className="text-lg font-poppins-medium">Status</Text>
-          <Text className="text-gray-600 font-poppins capitalize">{user.status || 'active'}</Text>
+          <Text className="text-gray-600 font-poppins capitalize">
+            {user.status || "active"}
+          </Text>
         </View>
 
-        {user.role !== 'admin' && (
+        {user.role !== "admin" && (
           <View className="space-y-3">
             <TouchableOpacity
               onPress={handleTimeout}
               disabled={updating}
-              className={`p-4 rounded-lg ${updating ? 'bg-gray-400' : 'bg-yellow-500'}`}
+              className={`p-4 rounded-lg ${
+                updating ? "bg-gray-400" : "bg-yellow-500"
+              }`}
             >
               {updating ? (
                 <ActivityIndicator size="small" color="#fff" />
@@ -205,20 +250,27 @@ const UserDetails = () => {
                 </Text>
               )}
             </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={handleDelete}
-              disabled={updating}
-              className={`p-4 mt-3 rounded-lg ${updating ? 'bg-gray-400' : 'bg-red-500'}`}
-            >
-              {updating ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text className="text-white font-poppins-medium text-center">
-                  Ban User Permanently
+            {user.banned ? (
+              <TouchableOpacity
+                className="bg-green-500 rounded-lg p-3 mt-5"
+                onPress={handleUnban}
+                disabled={updating}
+              >
+                <Text className="text-white text-center font-poppins-semibold text-lg">
+                  Unban User
                 </Text>
-              )}
-            </TouchableOpacity>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                className="bg-red-500 rounded-lg p-3 mt-5"
+                onPress={handleBan}
+                disabled={updating}
+              >
+                <Text className="text-white text-center font-poppins-semibold text-lg">
+                  Ban User
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </ScrollView>

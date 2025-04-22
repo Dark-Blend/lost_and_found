@@ -37,6 +37,12 @@ const signin = () => {
         const userDoc = await getDoc(doc(FIREBASE_DB, "users", userCredential.user.uid));
         if (userDoc.exists()) {
           const userData = userDoc.data();
+          // Check if user is banned
+          if (userData.banned) {
+            setLoading(false);
+            Alert.alert("Banned", "Your account has been banned. Please contact support.");
+            return;
+          }
           // Merge Firebase Auth user with Firestore data
           const userWithRole = {
             ...userCredential.user,

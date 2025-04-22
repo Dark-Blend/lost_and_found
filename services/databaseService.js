@@ -945,30 +945,28 @@ export const scheduleTimeoutCleanup = () => {
 };
 
 // Function to ban user and delete associated data from Firestore
+// Function to ban a user (set banned flag to true)
 export const banUser = async (userId) => {
   try {
-    const userRef = doc(FIREBASE_DB, 'users', userId);
-    const userDoc = await getDoc(userRef);
-    if (!userDoc.exists()) throw new Error('User not found');
-    const data = userDoc.data();
-    if (data.role === 'admin') throw new Error('Cannot ban an admin user');
-
-    const batch = writeBatch(FIREBASE_DB);
-    // Delete lost items
-    const lostSnap = await getDocs(query(collection(FIREBASE_DB, 'lostItems'), where('userId','==',userId)));
-    lostSnap.forEach(s => batch.delete(doc(FIREBASE_DB, 'lostItems', s.id)));
-    // Delete found items
-    const foundSnap = await getDocs(query(collection(FIREBASE_DB, 'foundItems'), where('userId','==',userId)));
-    foundSnap.forEach(s => batch.delete(doc(FIREBASE_DB, 'foundItems', s.id)));
-    // Delete notifications
-    const notifSnap = await getDocs(query(collection(FIREBASE_DB, 'notifications'), where('userId','==',userId)));
-    notifSnap.forEach(s => batch.delete(doc(FIREBASE_DB, 'notifications', s.id)));
-    // Delete user document
-    batch.delete(userRef);
-    await batch.commit();
-    return { success: true, message: 'User banned successfully' };
+    const userRef = doc(FIREBASE_DB, "users", userId);
+    await updateDoc(userRef, { banned: true });
+    console.log(`User ${userId} has been banned.`);
+    return true;
   } catch (error) {
-    console.error('Error banning user:', error);
+    console.error("Error banning user:", error);
+    throw error;
+  }
+};
+
+// Function to unban a user (set banned flag to false)
+export const unbanUser = async (userId) => {
+  try {
+    const userRef = doc(FIREBASE_DB, "users", userId);
+    await updateDoc(userRef, { banned: false });
+    console.log(`User ${userId} has been unbanned.`);
+    return true;
+  } catch (error) {
+    console.error("Error unbanning user:", error);
     throw error;
   }
 };
