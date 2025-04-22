@@ -678,6 +678,16 @@ export const getAllUsers = async (searchQuery = '') => {
   }
 };
 
+export const getAllUsersExceptCurrent = async (currentUserId) => {
+  try {
+    const users = await getAllUsers();
+    return users.filter((user) => user.id !== currentUserId);
+  } catch (error) {
+    console.error("Error loading users except current:", error);
+    throw error;
+  }
+};
+
 // Helper function to perform search across multiple fields
 const searchFilterMatch = (user, searchQuery) => {
   const lowercaseQuery = searchQuery.toLowerCase();
